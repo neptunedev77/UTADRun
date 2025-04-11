@@ -1,38 +1,55 @@
 import * as THREE from 'three';
 
+const roadBlocks = [];
+const roadLength = 60;
+const numBlocks = 3;
+
 export function createRoad() {
   const roadGroup = new THREE.Group();
 
+  for (let i = 0; i < numBlocks; i++) {
+    const road = createRoadSegment();
+    road.position.z = -i * roadLength;
+    roadGroup.add(road);
+    roadBlocks.push(road);
+  }
+
+  return roadGroup;
+}
+
+function createRoadSegment() {
+  const group = new THREE.Group();
+
   // Estrada
-  const geometry = new THREE.BoxGeometry(10, 0.1, 60);
+  const geometry = new THREE.BoxGeometry(10, 0.1, roadLength);
   const material = new THREE.MeshStandardMaterial({ color: 0x444444 });
   const road = new THREE.Mesh(geometry, material);
   road.receiveShadow = true;
-  roadGroup.add(road);
+  group.add(road);
 
-  // Linhas tracejadas entre as faixas
+  // Linhas tracejadas
   const lineMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
   const lineGeometry = new THREE.PlaneGeometry(0.1, 1); // traço fino e curto
 
-  const spacing = 2; // espaço entre traços
-  const positionsZ = [];
-  for (let z = -29; z <= 29; z += spacing) {
-    positionsZ.push(z);
+  for (let z = -roadLength / 2 + 1; z < roadLength / 2; z += 2) {
+    [-1.66, 1.66].forEach((x) => {
+      const line = new THREE.Mesh(lineGeometry, lineMaterial);
+      line.rotation.x = -Math.PI / 2;
+      line.position.set(x, 0.051, z);
+      group.add(line);
+    });
   }
 
-// Linhas tracejadas entre faixas
-positionsZ.forEach((z) => {
-    const lineLeft = new THREE.Mesh(lineGeometry, lineMaterial);
-    lineLeft.rotation.x = -Math.PI / 2;
-    lineLeft.position.set(-1.66, 0.051, z);
-    roadGroup.add(lineLeft);
-  
-    const lineRight = new THREE.Mesh(lineGeometry, lineMaterial);
-    lineRight.rotation.x = -Math.PI / 2;
-    lineRight.position.set(1.66, 0.051, z);
-    roadGroup.add(lineRight);
-  });
-  
+  return group;
+}
 
-  return roadGroup;
+// Função para mover e reciclar blocos da estrada
+export function updateRoad() {
+  roadBlocks.forEach((block) => {
+    block.position.z += 0.2; // velocidade de movimento
+
+    if (block.position.z > roadLength) {
+      block.position.z -= roadLength * numBlocks;
+    }
+  });
 }

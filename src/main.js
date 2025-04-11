@@ -1,6 +1,8 @@
 import { setupScene } from './sceneSetup.js';
-import { createRoad } from './roadManager.js';
-import { createPlayer, setupPlayerControls } from './playerManager.js';
+import { createRoad, updateRoad } from './roadManager.js';
+import { createPlayer, setupPlayerControls, updatePlayer } from './playerManager.js';
+import { loadObstacles, updateObstacles } from './obstacleManager.js';
+
 
 let scene, camera, renderer;
 
@@ -16,12 +18,18 @@ function init() {
   createPlayer(scene); // Carrega o jogador na cena
   setupPlayerControls(); // Configura os controlos do jogador
 
+  loadObstacles(scene); // Carrega os obstáculos na cena
+
   animate(); // Inicia a animação
 }
 
-function animate() { 
-  requestAnimationFrame(animate); 
-  renderer.render(scene, camera); 
+function animate() {
+  requestAnimationFrame(animate);
+  updatePlayer();     // <- aqui faz a carrinha deslizar  
+  updateRoad(); // faz a estrada "andar"
+  updateObstacles(); // Atualiza os obstáculos
+
+  renderer.render(scene, camera);
 }
 
 init();
