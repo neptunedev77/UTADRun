@@ -16,7 +16,7 @@ const modelList = [
   { name: 'tampa', generator: createTampa }
 ];
 
-// Tampa de esgoto gerada por geometria simples + textura
+// Tampa de esgoto gerada por geometria + textura
 function createTampa() {
   const texture = textureLoader.load('/assets/textures/tampa.png');
 
@@ -46,14 +46,14 @@ export function loadObstacles(scene) {
     } else {
       loader.load(file, (fbx) => {
         fbx.scale.set(scale, scale, scale);
-
+      
         const tex = texture ? textureLoader.load(texture) : null;
-
+      
         fbx.traverse((child) => {
           if (child.isMesh) {
             child.castShadow = false;
             child.receiveShadow = false;
-
+      
             if (tex) {
               child.material = new THREE.MeshStandardMaterial({
                 map: tex,
@@ -63,9 +63,10 @@ export function loadObstacles(scene) {
             }
           }
         });
-
-        obstacleTemplates[name] = fbx;
-        checkAllLoaded();
+      
+        fbx.userData = { type: name }; // <== mover aqui
+        obstacleTemplates[name] = fbx; // <== mover aqui
+        checkAllLoaded();              // <== manter aqui
       }, undefined, (error) => {
         console.error(`Erro ao carregar modelo ${name}:`, error);
       });
@@ -81,25 +82,32 @@ export function loadObstacles(scene) {
 }
 
 function generateObstacles(scene) {
+  const baseZ = spawnZStart;
+  const spacing = 15; // distância média entre obstáculos
+  const variation = 5; // aleatoriedade permitida
+
   for (let i = 0; i < maxObstacles; i++) {
     const template = getRandomTemplate();
     if (!template) continue;
 
     const clone = template.clone();
-    const name = clone.name.toLowerCase();
+    const name = clone.name.toLowerCase(); // define o nome primeiro
+    clone.userData.type = template.userData?.type || name; // depois atribuis
+    
 
-    let y = 0.051; // altura padrão para encaixar com a estrada
-
+    let y = 0.051;
     if (clone.geometry?.type === 'CircleGeometry') {
-      // tampa de esgoto (geometria manual)
       y = 0.051;
     } else if (name.includes('cone')) {
-      y = 0.25; // ajusta até tocar a estrada (testado)
+      y = 0.25;
     } else if (name.includes('cavalo')) {
-      y = 0.15; // cavalo parecia flutuar — reduzido
+      y = 0.15;
     }
 
-    clone.position.set(getRandomLaneX(), y, randomSpawnZ());
+    // espaçamento controlado com aleatoriedade leve
+    const z = baseZ - i * spacing - Math.random() * variation;
+
+    clone.position.set(getRandomLaneX(), y, z);
     scene.add(clone);
     obstacles.push(clone);
   }
@@ -121,14 +129,55 @@ function randomSpawnZ() {
   return spawnZStart - Math.random() * 80; // spawn entre -80 e -20
 }
 
-export function updateObstacles() {
-  obstacles.forEach((obstacle) => {
-    obstacle.position.z += 0.35;
+let scrollSpeed = 0.35;
+export function getScrollSpeed() {
+  return scrollSpeed;
+}
 
+let spacing = 15;
+let variation = 5;
+let lastObstacleType = null;
+let timeElapsed = 0;
+
+export function updateObstacles(deltaTime = 0.016) {
+  timeElapsed += deltaTime;
+
+  // Aumentar dificuldade a cada 10 segundos
+  if (Math.floor(timeElapsed) % 10 === 0) {
+    scrollSpeed = Math.min(0.8, scrollSpeed + 0.001); // velocidade máxima
+    spacing = Math.max(8, spacing - 0.01); // não deixa ficar demasiado junto
+  }
+
+  obstacles.forEach((obstacle) => {
+    obstacle.position.z += scrollSpeed;
 
     if (obstacle.position.z > 10) {
-      obstacle.position.z = randomSpawnZ();
-      obstacle.position.x = getRandomLaneX();
+      // encontrar o mais afastado
+      const farthestZ = Math.min(...obstacles.map(o => o.position.z));
+
+      // evitar mesmo tipo seguido
+      let newTemplate;
+      do {
+        newTemplate = getRandomTemplate();
+      } while (newTemplate.userData?.type === lastObstacleType);
+
+      lastObstacleType = newTemplate.userData?.type;
+
+      const newClone = newTemplate.clone();
+      const name = newClone.name.toLowerCase();
+
+      let y = 0.051;
+      if (newClone.geometry?.type === 'CircleGeometry') {
+        y = 0.051;
+      } else if (name.includes('cone')) {
+        y = 0.25;
+      } else if (name.includes('cavalo')) {
+        y = 0.15;
+      }
+
+      newClone.position.set(getRandomLaneX(), y, farthestZ - spacing - Math.random() * variation);
+      obstacle.position.copy(newClone.position);
+      obstacle.userData.type = newTemplate.userData?.type || name;
     }
   });
 }

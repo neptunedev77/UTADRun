@@ -1,4 +1,7 @@
 import * as THREE from 'three';
+import { getScrollSpeed } from './obstacleManager.js';
+
+
 
 const roadBlocks = [];
 const roadLength = 60;
@@ -45,11 +48,12 @@ function createRoadSegment() {
 
 // Função para mover e reciclar blocos da estrada
 export function updateRoad() {
-  roadBlocks.forEach((block) => {
-    block.position.z += 0.3; // velocidade de movimento
-
-    if (block.position.z > roadLength) {
-      block.position.z -= roadLength * numBlocks;
-    }
-  });
-}
+    roadBlocks.forEach((block) => {
+        block.position.z += getScrollSpeed();
+        // Verifica se o bloco saiu da tela
+      if (block.position.z > roadLength) {
+        block.position.z -= roadLength * numBlocks;
+      }
+    });
+  }
+  

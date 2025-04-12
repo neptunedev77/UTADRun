@@ -23,13 +23,20 @@ function init() {
   animate(); // Inicia a animação
 }
 
+let lastTime = performance.now();
+
 function animate() {
   requestAnimationFrame(animate);
-  updatePlayer();     // <- aqui faz a carrinha deslizar  
-  updateRoad(); // faz a estrada "andar"
-  updateObstacles(); // Atualiza os obstáculos
 
+  const now = performance.now();
+  const delta = (now - lastTime) / 1000; // segundos
+  lastTime = now;
+
+  updateObstacles(delta); // passa deltaTime
+  updateRoad();
+  updatePlayer();
   renderer.render(scene, camera);
 }
+
 
 init();
