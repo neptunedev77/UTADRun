@@ -3,24 +3,24 @@ import { FBXLoader } from 'FBXLoader';
 
 const obstacles = [];
 const obstacleTemplates = {};
-const lanePositions = [-1.7, 0, 1.7]; // reduzido de 2.5 para 1.7 para evitar que os obstáculos saiam do campo de visão
-const maxObstacles = 6;
+const lanePositions = [-3.2, 0, 3.2];
+const maxObstacles = 8;
 const spawnZStart = -80;
 
 const loader = new FBXLoader();
+const textureLoader = new THREE.TextureLoader();
 
 const modelList = [
-  { name: 'cone', file: '/assets/models/obstaculos/cone.fbx', scale: 0.01 },
-  { name: 'tronco', file: '/assets/models/obstaculos/tronco.fbx', scale: 0.02 },
-  { name: 'tampa', generator: createTampa } // Tampa manual com textura
+  { name: 'cone', file: './assets/models/obstaculos/cone.fbx', texture: '/assets/textures/cone.png', scale: 0.35 },
+  { name: 'cavalo', file: './assets/models/obstaculos/cavalo.fbx', scale: 0.02 },
+  { name: 'tampa', generator: createTampa }
 ];
 
-// Gera a tampa de esgoto leve com CircleGeometry
+// Tampa de esgoto gerada por geometria simples + textura
 function createTampa() {
-  const textureLoader = new THREE.TextureLoader();
   const texture = textureLoader.load('/assets/textures/tampa.png');
 
-  const geometry = new THREE.CircleGeometry(1, 32);
+  const geometry = new THREE.CircleGeometry(0.9, 32);
   const material = new THREE.MeshStandardMaterial({
     map: texture,
     metalness: 0.3,
@@ -38,7 +38,7 @@ function createTampa() {
 export function loadObstacles(scene) {
   let loaded = 0;
 
-  modelList.forEach(({ name, file, scale, generator }) => {
+  modelList.forEach(({ name, file, texture, scale, generator }) => {
     if (generator) {
       const mesh = generator();
       obstacleTemplates[name] = mesh;
@@ -46,12 +46,24 @@ export function loadObstacles(scene) {
     } else {
       loader.load(file, (fbx) => {
         fbx.scale.set(scale, scale, scale);
+
+        const tex = texture ? textureLoader.load(texture) : null;
+
         fbx.traverse((child) => {
           if (child.isMesh) {
             child.castShadow = false;
             child.receiveShadow = false;
+
+            if (tex) {
+              child.material = new THREE.MeshStandardMaterial({
+                map: tex,
+                metalness: 0.2,
+                roughness: 0.7
+              });
+            }
           }
         });
+
         obstacleTemplates[name] = fbx;
         checkAllLoaded();
       }, undefined, (error) => {
@@ -74,15 +86,25 @@ function generateObstacles(scene) {
     if (!template) continue;
 
     const clone = template.clone();
-    const isTampa = clone.geometry?.type === 'CircleGeometry';
-    const y = isTampa ? 0.06 : 0.5; // altura ideal para tampas vs. outros
+    const name = clone.name.toLowerCase();
 
-    clone.position.set(randomLane(), y, randomSpawnZ());
+    let y = 0.051; // altura padrão para encaixar com a estrada
 
+    if (clone.geometry?.type === 'CircleGeometry') {
+      // tampa de esgoto (geometria manual)
+      y = 0.051;
+    } else if (name.includes('cone')) {
+      y = 0.25; // ajusta até tocar a estrada (testado)
+    } else if (name.includes('cavalo')) {
+      y = 0.15; // cavalo parecia flutuar — reduzido
+    }
+
+    clone.position.set(getRandomLaneX(), y, randomSpawnZ());
     scene.add(clone);
     obstacles.push(clone);
   }
 }
+
 
 function getRandomTemplate() {
   const keys = Object.keys(obstacleTemplates);
@@ -90,22 +112,23 @@ function getRandomTemplate() {
   return obstacleTemplates[rand];
 }
 
-function randomLane() {
+function getRandomLaneX() {
   const index = Math.floor(Math.random() * lanePositions.length);
   return lanePositions[index];
 }
 
 function randomSpawnZ() {
-  return spawnZStart - Math.random() * 60;
+  return spawnZStart - Math.random() * 80; // spawn entre -80 e -20
 }
 
 export function updateObstacles() {
   obstacles.forEach((obstacle) => {
-    obstacle.position.z += 0.5;
+    obstacle.position.z += 0.35;
+
 
     if (obstacle.position.z > 10) {
       obstacle.position.z = randomSpawnZ();
-      obstacle.position.x = randomLane();
+      obstacle.position.x = getRandomLaneX();
     }
   });
 }

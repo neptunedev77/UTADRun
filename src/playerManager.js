@@ -7,7 +7,7 @@ const texture = textureLoader.load('/assets/models/van/textures/van_03_a.png');
 let targetX = 0;
 let van;
 let currentLaneIndex = 1; // começa no meio
-const lanePositions = [-1.7, 0, 1.7];
+const lanePositions = [-2.5, 0, 2.5];
 
 export function createPlayer(scene) {
   const loader = new FBXLoader();

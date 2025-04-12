@@ -46,7 +46,7 @@ function createRoadSegment() {
 // Função para mover e reciclar blocos da estrada
 export function updateRoad() {
   roadBlocks.forEach((block) => {
-    block.position.z += 0.2; // velocidade de movimento
+    block.position.z += 0.3; // velocidade de movimento
 
     if (block.position.z > roadLength) {
       block.position.z -= roadLength * numBlocks;
