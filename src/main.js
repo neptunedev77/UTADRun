@@ -1,7 +1,7 @@
 import { setupScene } from './sceneSetup.js';
 import { createRoad, updateRoad } from './roadManager.js';
 import { createPlayer, setupPlayerControls, updatePlayer } from './playerManager.js';
-import { loadObstacles, updateObstacles } from './obstacleManager.js';
+import { loadObstacles, updateObstacles, getScrollSpeed } from './obstacleManager.js';
 
 
 let scene, camera, renderer;
@@ -23,20 +23,14 @@ function init() {
   animate(); // Inicia a animação
 }
 
-let lastTime = performance.now();
-
 function animate() {
   requestAnimationFrame(animate);
+  updatePlayer();     // <- aqui faz a carrinha deslizar  
+  updateRoad(); // faz a estrada "andar"
+  updateObstacles(); // Atualiza os obstáculos
+  document.getElementById('speed').textContent = 'Velocidade: ' + getScrollSpeed().toFixed(2) + 'x';
 
-  const now = performance.now();
-  const delta = (now - lastTime) / 1000; // segundos
-  lastTime = now;
-
-  updateObstacles(delta); // passa deltaTime
-  updateRoad();
-  updatePlayer();
   renderer.render(scene, camera);
 }
-
 
 init();

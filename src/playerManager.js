@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'FBXLoader';
 
+
 const textureLoader = new THREE.TextureLoader();
 const texture = textureLoader.load('/assets/models/van/textures/van_03_a.png');
 
@@ -63,3 +64,5 @@ export function updatePlayer() {
   if (!van) return;
   van.position.x += (targetX - van.position.x) * 0.1;
 }
+
+

@@ -4,7 +4,7 @@ import { FBXLoader } from 'FBXLoader';
 const obstacles = [];
 const obstacleTemplates = {};
 const lanePositions = [-3.2, 0, 3.2];
-const maxObstacles = 8;
+const maxObstacles = 10;
 const spawnZStart = -80;
 
 const loader = new FBXLoader();
@@ -13,27 +13,30 @@ const textureLoader = new THREE.TextureLoader();
 const modelList = [
   { name: 'cone', file: './assets/models/obstaculos/cone.fbx', texture: '/assets/textures/cone.png', scale: 0.35 },
   { name: 'cavalo', file: './assets/models/obstaculos/cavalo.fbx', scale: 0.02 },
-  { name: 'tampa', generator: createTampa }
+  { name: 'buraco', generator: createBuraco }
 ];
 
-// Tampa de esgoto gerada por geometria + textura
-function createTampa() {
-  const texture = textureLoader.load('/assets/textures/tampa.png');
+// Gerador de buraco
+function createBuraco() {
+  const texture = textureLoader.load('/assets/textures/buraco.jpg');
 
-  const geometry = new THREE.CircleGeometry(0.9, 32);
+  const geometry = new THREE.CircleGeometry(1.2, 32); // um pouco maior que a tampa
   const material = new THREE.MeshStandardMaterial({
     map: texture,
-    metalness: 0.3,
+    metalness: 0.2,
     roughness: 0.8,
+    side: THREE.DoubleSide // garante visibilidade de ambos os lados
   });
 
   const mesh = new THREE.Mesh(geometry, material);
   mesh.rotation.x = -Math.PI / 2;
   mesh.castShadow = false;
   mesh.receiveShadow = true;
+  mesh.userData.type = 'buraco';
 
   return mesh;
 }
+
 
 export function loadObstacles(scene) {
   let loaded = 0;
@@ -97,7 +100,7 @@ function generateObstacles(scene) {
 
     let y = 0.051;
     if (clone.geometry?.type === 'CircleGeometry') {
-      y = 0.051;
+      y = 0.07;
     } else if (name.includes('cone')) {
       y = 0.25;
     } else if (name.includes('cavalo')) {
@@ -115,10 +118,28 @@ function generateObstacles(scene) {
 
 
 function getRandomTemplate() {
-  const keys = Object.keys(obstacleTemplates);
-  const rand = keys[Math.floor(Math.random() * keys.length)];
-  return obstacleTemplates[rand];
+  const weightedList = [
+    'cone', 'cone', 'cone', // 🎯 cones com mais peso
+    'cavalo',               // 🐴 menos frequente
+    'buraco', 'buraco'      // buracos com chance média
+  ];
+
+  let chosenName;
+  let attempts = 0;
+  
+  do {
+    const randIndex = Math.floor(Math.random() * weightedList.length);
+    chosenName = weightedList[randIndex];
+    attempts++;
+  } while (
+    obstacleTemplates[chosenName]?.userData?.type === lastObstacleType &&
+    attempts < 10
+  );
+  
+
+  return obstacleTemplates[chosenName];
 }
+
 
 function getRandomLaneX() {
   const index = Math.floor(Math.random() * lanePositions.length);
@@ -142,11 +163,15 @@ let timeElapsed = 0;
 export function updateObstacles(deltaTime = 0.016) {
   timeElapsed += deltaTime;
 
-  // Aumentar dificuldade a cada 10 segundos
-  if (Math.floor(timeElapsed) % 10 === 0) {
-    scrollSpeed = Math.min(0.8, scrollSpeed + 0.001); // velocidade máxima
-    spacing = Math.max(8, spacing - 0.01); // não deixa ficar demasiado junto
+  // Aumentar dificuldade
+  const previousStep = Math.floor((timeElapsed - deltaTime) / 2);
+  const currentStep = Math.floor(timeElapsed / 2);
+  
+  if (currentStep > previousStep) {
+    scrollSpeed = Math.min(1.5, scrollSpeed + 0.02);
+    spacing = Math.max(4, 15 - timeElapsed * 0.1); // diminui com o tempo
   }
+  
 
   obstacles.forEach((obstacle) => {
     obstacle.position.z += scrollSpeed;
@@ -161,14 +186,15 @@ export function updateObstacles(deltaTime = 0.016) {
         newTemplate = getRandomTemplate();
       } while (newTemplate.userData?.type === lastObstacleType);
 
-      lastObstacleType = newTemplate.userData?.type;
-
       const newClone = newTemplate.clone();
-      const name = newClone.name.toLowerCase();
+      const name = newClone.name?.toLowerCase() || 'obstaculo';
+      
+      lastObstacleType = newTemplate.userData?.type || name;
+      
 
       let y = 0.051;
       if (newClone.geometry?.type === 'CircleGeometry') {
-        y = 0.051;
+        y = 0.07;
       } else if (name.includes('cone')) {
         y = 0.25;
       } else if (name.includes('cavalo')) {
