@@ -2,7 +2,11 @@ import * as THREE from 'three';
 
 export function setupScene() {
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xa3d5ff);
+  
+  // Carregar a textura do céu
+  const textureLoader = new THREE.TextureLoader();
+  const skyTexture = textureLoader.load('assets/textures/sky.png');
+  scene.background = skyTexture;
 
   const camera = new THREE.PerspectiveCamera(
     75,
