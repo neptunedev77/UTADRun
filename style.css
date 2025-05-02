@@ -8,10 +8,19 @@ body {
   
   .speed {
     position: absolute;
-    top: 10px;
+    bottom: 35px;
     left: 10px;
     color: white;
     font-size: 16px;
+    font-family: sans-serif;
+  }
+  
+  .camera-hint {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    color: lightyellow;
+    font-size: 14px;
     font-family: sans-serif;
   }
   

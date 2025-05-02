@@ -150,7 +150,7 @@ function randomSpawnZ() {
   return spawnZStart - Math.random() * 80; // spawn entre -80 e -20
 }
 
-let scrollSpeed = 0.35;
+let scrollSpeed = 0.1;
 export function getScrollSpeed() {
   return scrollSpeed;
 }

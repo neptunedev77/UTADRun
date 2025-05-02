@@ -65,4 +65,8 @@ export function updatePlayer() {
   van.position.x += (targetX - van.position.x) * 0.1;
 }
 
+export function getPlayerPosition() {
+  if (!van) return new THREE.Vector3(0, 0, 0);
+  return van.position.clone();
+}
 
