@@ -6,21 +6,22 @@ body {
     display: block;
   }
   
-  .speed {
-    position: absolute;
-    bottom: 35px;
-    left: 10px;
-    color: white;
-    font-size: 16px;
-    font-family: sans-serif;
-  }
-  
-  .camera-hint {
+  .game-info {
     position: absolute;
     bottom: 10px;
     left: 10px;
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-family: sans-serif;
+  }
+  
+  .speed, .camera-hint {
     color: lightyellow;
     font-size: 14px;
-    font-family: sans-serif;
+  }
+  
+  .speed {
+    margin-bottom: 4px;
   }
   

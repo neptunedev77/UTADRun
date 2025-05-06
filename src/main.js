@@ -1,15 +1,11 @@
 import * as THREE from 'three';
-import { setupScene } from './sceneSetup.js';
+import { setupScene, setLightMode, updatePointLightPosition, setCameraMode, getActiveCamera } from './sceneSetup.js';
 import { createRoad, updateRoad } from './roadManager.js';
 import { createPlayer, setupPlayerControls, updatePlayer, getPlayerPosition } from './playerManager.js';
 import { loadObstacles, updateObstacles, getScrollSpeed } from './obstacleManager.js';
 import { loadTrees, updateTrees } from './treeManager.js';
 
 let scene, camera, renderer;
-let cameraMode = 'default'; // 'default' ou 'top'
-let defaultCameraPosition;
-let defaultLookAt = new THREE.Vector3(0, 0, 0);
-const fixedTopCameraZ = 4; // posição Z aproximada da carrinha no início
 
 function init() {
   const setup = setupScene(); 
@@ -17,26 +13,28 @@ function init() {
   camera = setup.camera;
   renderer = setup.renderer;
 
-  // Guarda a posição e direção da câmara inicial
-  defaultCameraPosition = camera.position.clone();
-  defaultLookAt = new THREE.Vector3(0, 0, 0); // olha para o centro da estrada
-
-  // Atalhos de teclado para mudar a câmara
+  // Atalhos de teclado para mudar a câmara e iluminação
   window.addEventListener('keydown', (event) => {
     if (event.key.toLowerCase() === 'l') {
-      // Vista aérea fixa na lane do meio
-      cameraMode = 'top';
-      camera.position.set(0, 15, fixedTopCameraZ);
-      camera.lookAt(0, 0, fixedTopCameraZ);
-      updateCameraHint("Vista aérea (L)");
+      setCameraMode('orthographic');
     }
 
     if (event.key.toLowerCase() === 'k') {
-      // Repõe a vista inicial original (posição exata de arranque)
-      cameraMode = 'default';
-      camera.position.copy(defaultCameraPosition);
-      camera.lookAt(defaultLookAt);
-      updateCameraHint("Vista padrão (K)");
+      setCameraMode('default');
+    }
+
+    // Controles de iluminação
+    if (event.key === '0') {
+      setLightMode(0);
+    }
+    if (event.key === '1') {
+      setLightMode(1);
+    }
+    if (event.key === '2') {
+      setLightMode(2);
+    }
+    if (event.key === '3') {
+      setLightMode(3);
     }
   });
 
@@ -60,18 +58,17 @@ function animate() {
   updateObstacles();  // Atualiza os obstáculos
   updateTrees();      // Atualiza as árvores
 
+  // Atualiza a posição da luz da carrinha
+  const playerPos = getPlayerPosition();
+  if (playerPos) {
+    updatePointLightPosition(playerPos);
+  }
+
   document.getElementById('speed').textContent =
     'Velocidade: ' + getScrollSpeed().toFixed(2) + 'x';
 
-  renderer.render(scene, camera);
-}
-
-// Atualiza o texto no canto inferior esquerdo com a vista ativa
-function updateCameraHint(text) {
-  const hintElement = document.getElementById('cameraHint');
-  if (hintElement) {
-    hintElement.textContent = 'Atalhos: [K] Vista Inicial | [L] Vista Aérea — ' + text;
-  }
+  // Usa a câmera apropriada baseada no modo
+  renderer.render(scene, getActiveCamera());
 }
 
 init();
