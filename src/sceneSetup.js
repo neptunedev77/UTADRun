@@ -53,7 +53,7 @@ export function setupScene() {
 
   // Luz direcional - ajustada para simular o sol (mais intensa e amarelada)
   directionalLight = new THREE.DirectionalLight(0xfffacd, 1.2);
-  directionalLight.position.set(-5, 20, 10); // Posição do sol mais realista
+  directionalLight.position.set(0, 20, 10);
   directionalLight.castShadow = true; // Ativa sombras
   directionalLight.shadow.mapSize.width = 2048;
   directionalLight.shadow.mapSize.height = 2048;

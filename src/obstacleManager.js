@@ -11,7 +11,7 @@ const loader = new FBXLoader();
 const textureLoader = new THREE.TextureLoader();
 
 const modelList = [
-  { name: 'cone', file: './assets/models/obstaculos/cone.fbx', texture: '/assets/textures/cone.png', scale: 0.35 },
+  { name: 'cone', generator: createConeDeTransito },
   { name: 'cavalo', file: './assets/models/obstaculos/cavalo.fbx', scale: 0.02 },
   { name: 'buraco', generator: createBuraco }
 ];
@@ -37,6 +37,55 @@ function createBuraco() {
   return mesh;
 }
 
+// Função para criar o cone de trânsito
+function createConeDeTransito() {
+  const coneDeTransito = new THREE.Group();
+
+  // Textura do cone
+  const texture = textureLoader.load('/assets/textures/cone_stripes.png');
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+
+  // Geometria do cone
+  const coneGeometry = new THREE.ConeGeometry(0.75, 2, 32);
+
+  // Material do cone usando a textura
+  const coneMaterial = new THREE.MeshStandardMaterial({ 
+    map: texture,
+    roughness: 0.7,
+    metalness: 0.2
+  });
+
+  // Mesh do cone
+  const cone = new THREE.Mesh(coneGeometry, coneMaterial);
+
+  cone.position.y = 1.5;
+  coneDeTransito.add(cone);
+
+  // Base do cone
+  const baseGeometry = new THREE.BoxGeometry(1.6, 0.2, 1.6);
+
+  // Clona a textura e ajusta para mostrar só a parte inferior
+  const baseTexture = texture.clone();
+  baseTexture.offset.set(0, 0.8); // Mostra só a parte de baixo da textura
+  baseTexture.repeat.set(1, 0.2); // Comprime verticalmente
+
+  // Material da base
+  const baseMaterial = new THREE.MeshStandardMaterial({
+    map: baseTexture,
+    roughness: 0.7,
+    metalness: 0.2
+  });
+
+  // Mesh da base
+  const base = new THREE.Mesh(baseGeometry, baseMaterial);
+  // Posiciona a base no chão
+  base.position.y = 0.5;
+  coneDeTransito.add(base);
+
+  coneDeTransito.userData = { type: 'cone' };
+  return coneDeTransito;
+}
 
 export function loadObstacles(scene) {
   let loaded = 0;

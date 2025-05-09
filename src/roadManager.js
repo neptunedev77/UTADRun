@@ -13,25 +13,6 @@ const grassWidth = 200;
 let postsLightsOn = false;
 window.streetLightsOn = postsLightsOn;
 
-// Geometria e material do poste e lâmpada
-const lamppostGeometries = {
-  pole: new THREE.CylinderGeometry(0.15, 0.15, 5, 16),
-  lamp: new THREE.SphereGeometry(0.5, 16, 16)
-};
-
-const lamppostMaterials = {
-  pole: new THREE.MeshStandardMaterial({ 
-    color: 0x444444,
-    roughness: 0.2,
-    metalness: 0.8
-  }),
-  lamp: new THREE.MeshStandardMaterial({ 
-    color: 0xffffff,
-    roughness: 0.3,
-    metalness: 0.1
-  })
-};
-
 export function createRoad() {
   const group = new THREE.Group();
 
@@ -58,6 +39,7 @@ export function createRoad() {
     // Passeio direito
     const rightWalk = createSidewalkMesh();
     rightWalk.position.x = xOff;
+    rightWalk.scale.x = -1;
     bloco.add(rightWalk);
 
     // Poste direito
@@ -86,6 +68,31 @@ export function createRoad() {
   return group;
 }
 
+// Geometria e material do poste e lâmpada
+const lamppostGeometries = {
+  pole: new THREE.CylinderGeometry(0.15, 0.15, 5, 16),
+  lamp: new THREE.SphereGeometry(0.5, 16, 16),
+  circle: new THREE.CylinderGeometry(0.3, 0.3, 0.1, 32)
+};
+
+const lamppostMaterials = {
+  pole: new THREE.MeshStandardMaterial({ 
+    color: 0x444444,
+    roughness: 0.2,
+    metalness: 0.8
+  }),
+  lamp: new THREE.MeshStandardMaterial({ 
+    color: 0xffffff,
+    roughness: 0.3,
+    metalness: 0.1
+  }),
+  circle: new THREE.MeshStandardMaterial({
+    color: 0x444444,
+    roughness: 0.2,
+    metalness: 0.8
+  })
+};
+
 function createLightPost() {
   const post = new THREE.Group();
   
@@ -94,6 +101,16 @@ function createLightPost() {
   pole.position.y = 2.5;
   pole.receiveShadow = true;
   post.add(pole);
+
+  // Disco inferior
+  const bottomCircle = new THREE.Mesh(lamppostGeometries.circle, lamppostMaterials.circle);
+  bottomCircle.position.set(0, 0, 0);
+  post.add(bottomCircle);
+
+  // Disco superior
+  const topCircle = new THREE.Mesh(lamppostGeometries.circle, lamppostMaterials.circle);
+  topCircle.position.set(0, 4.7, 0);
+  post.add(topCircle);
 
   // Lâmpada
   const lampMaterial = lamppostMaterials.lamp.clone();
@@ -120,21 +137,37 @@ function createSidewalkMesh() {
   topoTex.wrapS = topoTex.wrapT = THREE.RepeatWrapping;
   topoTex.repeat.set(1, roadLength); // Repete só no Z
 
+  // Carrega e configura a textura lateral
+  const sideTex = new THREE.TextureLoader().load('/assets/textures/passeio_lado.png');
+  sideTex.wrapS = sideTex.wrapT = THREE.RepeatWrapping;
+  sideTex.repeat.set(1, roadLength); // Repete só no Z
+  sideTex.rotation = Math.PI/2; // Roda a textura para alinhar com o eixo Z
+  
   // Materiais
-  const matSide = new THREE.MeshStandardMaterial({ color: 0x777777, roughness: 0.9, metalness: 0.1 });
+  const matSide = new THREE.MeshStandardMaterial({ 
+    map: sideTex,
+    roughness: 0.9, 
+    metalness: 0.1
+  });
+
   const matTop = new THREE.MeshStandardMaterial({
     map: topoTex,
     roughness: 0.9,
     metalness: 0.1
   });
 
+  // Material para não renderizar os lados que não se vêem	
+  const matHidden = new THREE.MeshStandardMaterial({
+    side: THREE.BackSide
+  });
+
   const materials = [
-    matSide, // +X
-    matSide, // -X
-    matTop,  // +Y
-    matSide, // -Y
-    matSide, // +Z
-    matSide  // -Z
+    matSide,    // +X (lado da estrada)
+    matSide,  // -X (lado externo)
+    matTop,     // +Y (topo)
+    matHidden,  // -Y (baixo)
+    matHidden,  // +Z (frente)
+    matHidden   // -Z (trás)
   ];
 
   const geo = new THREE.BoxGeometry(sidewalkWidth, sidewalkHeight, roadLength);
