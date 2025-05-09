@@ -9,6 +9,8 @@ let targetX = 0;
 let van;
 let currentLaneIndex = 1; // começa no meio
 const lanePositions = [-2.5, 0, 2.5];
+let headlightsOn = false;
+let leftHeadlight, rightHeadlight;
 
 export function createPlayer(scene) {
   const loader = new FBXLoader();
@@ -29,6 +31,21 @@ export function createPlayer(scene) {
         });
       }
     });
+
+    // Adiciona os faróis (SpotLight)
+    leftHeadlight = new THREE.SpotLight(0xffffff, 20, 60, Math.PI / 7, 0.3, 1);
+    leftHeadlight.position.set(-0.4, 0.7, 2.5); // posição na frente da van
+    leftHeadlight.target.position.set(-0.4, 0.3, 8); // alvo mais à frente
+    leftHeadlight.visible = headlightsOn;
+    van.add(leftHeadlight);
+    van.add(leftHeadlight.target);
+
+    rightHeadlight = new THREE.SpotLight(0xffffff, 20, 60, Math.PI / 7, 0.3, 1);
+    rightHeadlight.position.set(0.4, 0.7, 2.5);
+    rightHeadlight.target.position.set(0.4, 0.3, 8);
+    rightHeadlight.visible = headlightsOn;
+    van.add(rightHeadlight);
+    van.add(rightHeadlight.target);
 
     scene.add(van);
   }, undefined, (error) => {
@@ -52,6 +69,13 @@ export function setupPlayerControls() {
         currentLaneIndex++;
         updateLanePosition();
       }
+    }
+
+    // Tecla 4 para ligar/desligar os faróis
+    if (event.key === '4') {
+      headlightsOn = !headlightsOn;
+      if (leftHeadlight) leftHeadlight.visible = headlightsOn;
+      if (rightHeadlight) rightHeadlight.visible = headlightsOn;
     }
   });
 }

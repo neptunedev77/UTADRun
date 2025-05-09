@@ -30,7 +30,7 @@ export function setupScene() {
 
   // Câmera ortográfica
   const aspect = window.innerWidth / window.innerHeight;
-  const frustumSize = 20;
+  const frustumSize = 30;
   orthographicCamera = new THREE.OrthographicCamera(
     frustumSize * aspect / -2,
     frustumSize * aspect / 2,
@@ -134,7 +134,7 @@ function updateCameraHint() {
     // Texto baseado na câmara atual
     let cameraText = "";
     if (cameraMode === 'orthographic') {
-      cameraText = "[C] Câmara Ortográfica";
+      cameraText = "[C] Câmara Ortogonal";
     } else {
       cameraText = "[C] Câmara Perspetiva";
     }
@@ -146,4 +146,11 @@ function updateCameraHint() {
 // Função que atualiza o texto das luzes na UI
 function updateLightingHint() {
   updateCameraHint();
+}
+
+// Supondo que o objeto do veículo se chama 'car'
+if (cameraMode === 'orthographic') {
+  orthographicCamera.position.x = car.position.x;
+  orthographicCamera.position.z = car.position.z;
+  orthographicCamera.lookAt(car.position.x, 0, car.position.z);
 }
