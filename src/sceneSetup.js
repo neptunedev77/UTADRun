@@ -1,9 +1,11 @@
 import * as THREE from 'three';
 
-let pointLight;
 let ambientLight;
 let directionalLight;
-let currentLightMode = 0; // 0: default, 1: point, 2: directional, 3: ambient
+let lightStates = {
+  ambient: true,
+  directional: true
+};
 let camera;
 let orthographicCamera;
 let cameraMode = 'default';
@@ -44,84 +46,104 @@ export function setupScene() {
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
 
-  // Luz ambiente
-  ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+  // Luz ambiente - ajustada para um dia ensolarado (azul leve para simular luz do céu)
+  ambientLight = new THREE.AmbientLight(0xc4d1ff, 0.4);
+  ambientLight.visible = lightStates.ambient;
   scene.add(ambientLight);
 
-  // Luz direcional
-  directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-  directionalLight.position.set(5, 10, 5);
+  // Luz direcional - ajustada para simular o sol (mais intensa e amarelada)
+  directionalLight = new THREE.DirectionalLight(0xfffacd, 1.2);
+  directionalLight.position.set(-5, 20, 10); // Posição do sol mais realista
+  directionalLight.castShadow = true; // Ativa sombras
+  directionalLight.shadow.mapSize.width = 2048;
+  directionalLight.shadow.mapSize.height = 2048;
+  directionalLight.shadow.camera.near = 0.5;
+  directionalLight.shadow.camera.far = 500;
+  directionalLight.visible = lightStates.directional;
   scene.add(directionalLight);
 
-  // PointLight (luz da carrinha)
-  pointLight = new THREE.PointLight(0xffffff, 100, 70);
-  pointLight.position.set(0, 2, 4); // Posição inicial similar à da carrinha
-  pointLight.visible = false;
-  scene.add(pointLight);
+  // Ativar sombras no renderer
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   return { scene, camera, renderer };
 }
 
+export function getActiveCamera() {
+  if (cameraMode === 'orthographic') {
+    return orthographicCamera;
+  } else {
+    return camera;
+  }
+}
+
 export function setCameraMode(mode) {
   cameraMode = mode;
-  switch(mode) {
-    case 'orthographic':
-      updateCameraHint("Vista ortográfica (L)");
-      break;
-    case 'default':
-      updateCameraHint("Vista padrão (K)");
-      break;
+  updateCameraHint();
+}
+
+// Função para ligar/desligar cada luz
+export function toggleLight(type, value, justCheck = false) {
+  if (justCheck) {
+    return lightStates[type];
   }
-}
-
-export function getActiveCamera() {
-  return cameraMode === 'orthographic' ? orthographicCamera : camera;
-}
-
-export function setLightMode(mode) {
-  currentLightMode = mode;
   
-  // Reset all lights to default state
-  ambientLight.intensity = 0.5;
-  directionalLight.intensity = 0.8;
-  pointLight.visible = false;
-  
-  switch(mode) {
-    case 0: // Default (all lights)
-      ambientLight.intensity = 0.5;
-      directionalLight.intensity = 0.8;
-      pointLight.visible = false;
+  switch(type) {
+    case 'ambient':
+      lightStates.ambient = value !== undefined ? value : !lightStates.ambient;
+      ambientLight.visible = lightStates.ambient;
       break;
-    case 1: // PointLight only (luz da carrinha)
-      ambientLight.intensity = 0.15;
-      directionalLight.intensity = 0.05;
-      pointLight.visible = true;
-      break;
-    case 2: // DirectionalLight only
-      ambientLight.intensity = 0.3;
-      directionalLight.intensity = 1.0;
-      pointLight.visible = false;
-      break;
-    case 3: // AmbientLight only
-      ambientLight.intensity = 1.0;
-      directionalLight.intensity = 0.0;
-      pointLight.visible = false;
+    case 'directional':
+      lightStates.directional = value !== undefined ? value : !lightStates.directional;
+      directionalLight.visible = lightStates.directional;
       break;
   }
+  
+  if (!justCheck) {
+    updateLightingHint();
+  }
+  
+  return lightStates[type];
 }
 
-export function updatePointLightPosition(vanPosition) {
-  if (pointLight && pointLight.visible) {
-    pointLight.position.x = vanPosition.x;
-    pointLight.position.z = vanPosition.z;
-    pointLight.position.y = vanPosition.y + 1.5;
+// Função que controla o texto das luzes
+function getLightStatusText() {
+  const ambient = lightStates.ambient ? "ON" : "OFF";
+  const directional = lightStates.directional ? "ON" : "OFF";
+  
+  // Para obter acesso ao estado dos postes, importamos a variável do main.js
+  let streetLightsStatus = "OFF";
+  try {
+    // Tenta acessar a variável global definida em main.js 
+    if (window.streetLightsOn !== undefined) {
+      streetLightsStatus = window.streetLightsOn ? "ON" : "OFF";
+    }
+  } catch (e) {
+    // Se falhar, mantém como OFF
   }
+  
+  return `Luzes: [1] Ambiente: ${ambient} | [2] Direcional: ${directional} | [3] Postes: ${streetLightsStatus}`;
 }
 
 // Atualiza o texto no canto inferior esquerdo com a vista ativa
-function updateCameraHint(text) {
+function updateCameraHint() {
   const hintElement = document.getElementById('cameraHint');
   if (hintElement) {
-    hintElement.textContent = 'Atalhos: [K] Vista Inicial | [L] Vista Ortográfica | [0] Iluminação: Padrão | [1] Iluminação: Luz da Carrinha | [2] Iluminação: DirectionalLight | [3] Iluminação: AmbientLight — ' + text;
+    const lightText = getLightStatusText();
+    
+    // Texto baseado na câmara atual
+    let cameraText = "";
+    if (cameraMode === 'orthographic') {
+      cameraText = "[C] Câmara Ortográfica";
+    } else {
+      cameraText = "[C] Câmara Perspetiva";
+    }
+    
+    hintElement.textContent = cameraText + ' | ' + lightText;
   }
+}
+
+// Função que atualiza o texto das luzes na UI
+function updateLightingHint() {
+  updateCameraHint();
 }

@@ -9,6 +9,29 @@ const sidewalkWidth = 4;
 const sidewalkHeight = 1;
 const grassWidth = 200;
 
+// Controlo do estado das luzes dos postes
+let postsLightsOn = false;
+window.streetLightsOn = postsLightsOn;
+
+// Geometria e material do poste e lâmpada
+const lamppostGeometries = {
+  pole: new THREE.CylinderGeometry(0.15, 0.15, 5, 16),
+  lamp: new THREE.SphereGeometry(0.5, 16, 16)
+};
+
+const lamppostMaterials = {
+  pole: new THREE.MeshStandardMaterial({ 
+    color: 0x444444,
+    roughness: 0.2,
+    metalness: 0.8
+  }),
+  lamp: new THREE.MeshStandardMaterial({ 
+    color: 0xffffff,
+    roughness: 0.3,
+    metalness: 0.1
+  })
+};
+
 export function createRoad() {
   const group = new THREE.Group();
 
@@ -22,24 +45,25 @@ export function createRoad() {
     const passeio = createSidewalkMesh();
     const xOff = (roadWidth/2) + (sidewalkWidth/2);
 
+    // Passeio esquerdo
     const leftWalk = passeio.clone();
     leftWalk.position.x = -xOff;
     bloco.add(leftWalk);
 
+    // Poste esquerdo
+    const leftPost = createLightPost();
+    leftPost.position.set(-xOff - (sidewalkWidth/2) + 1.3, sidewalkHeight, -roadLength/2);
+    bloco.add(leftPost);
+
+    // Passeio direito
     const rightWalk = createSidewalkMesh();
     rightWalk.position.x = xOff;
-
-    // garante que tens geometria própria (não partilhada)
-    rightWalk.geometry = rightWalk.geometry.clone();
-
-    // inverte cada coordenada U
-    const uvs = rightWalk.geometry.attributes.uv;
-    for (let i = 0; i < uvs.count; i++) {
-      uvs.setX(i, 1 - uvs.getX(i));
-    }
-    uvs.needsUpdate = true;
-
     bloco.add(rightWalk);
+
+    // Poste direito
+    const rightPost = createLightPost();
+    rightPost.position.set(xOff + (sidewalkWidth/2) - 1.3, sidewalkHeight, -roadLength/2);
+    bloco.add(rightPost);
 
     // Relva de cada lado do passeio
     const grassXOff = (roadWidth / 2) + sidewalkWidth + (grassWidth / 2);
@@ -60,6 +84,34 @@ export function createRoad() {
   }
 
   return group;
+}
+
+function createLightPost() {
+  const post = new THREE.Group();
+  
+  // Mastro vertical
+  const pole = new THREE.Mesh(lamppostGeometries.pole, lamppostMaterials.pole);
+  pole.position.y = 2.5;
+  pole.receiveShadow = true;
+  post.add(pole);
+
+  // Lâmpada
+  const lampMaterial = lamppostMaterials.lamp.clone();
+  const lamp = new THREE.Mesh(lamppostGeometries.lamp, lampMaterial);
+  lamp.position.set(0, 5.15, 0);
+  post.add(lamp);
+
+  // Luz
+  const light = new THREE.PointLight(0xffffaa, 20.0, 30);
+  light.position.set(0, 5.15, 0);
+  light.visible = postsLightsOn;
+  post.add(light);
+  
+  // Armazena referências para controle
+  post.light = light;
+  post.lamp = lamp;
+
+  return post;
 }
 
 function createSidewalkMesh() {
@@ -169,4 +221,29 @@ export function updateRoad() {
       block.position.z -= roadLength * numBlocks;
     }
   });
+}
+
+// Adicionar esta função para alternar as luzes
+export function toggleLights(enabled) {
+  postsLightsOn = enabled;
+  window.streetLightsOn = postsLightsOn;
+  
+  roadBlocks.forEach(block => {
+    block.traverse(child => {
+      if (child.isGroup && child.light) {
+        child.light.visible = enabled;
+        
+        if (child.lamp) {
+          const lampMaterial = child.lamp.material;
+          lampMaterial.emissive = enabled ? new THREE.Color(0xffffaa) : new THREE.Color(0x000000);
+          lampMaterial.emissiveIntensity = enabled ? 0.8 : 0;
+        }
+      }
+    });
+  });
+}
+
+// Função para verificar o estado atual das luzes
+export function getPostsLightsState() {
+  return postsLightsOn;
 }
