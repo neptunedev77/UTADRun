@@ -6,6 +6,7 @@ import { loadObstacles, updateObstacles, getScrollSpeed } from './obstacleManage
 import { loadTrees, updateTrees } from './treeManager.js';
 
 let scene, camera, renderer;
+let lastTime = 0;
 
 function init() {
   const setup = setupScene(); 
@@ -45,6 +46,7 @@ function init() {
   loadObstacles(scene); // Carrega os obstáculos na cena
   loadTrees(scene); // Carrega as árvores na cena
 
+  lastTime = performance.now();
   animate(); // Inicia a animação
 }
 
@@ -64,13 +66,20 @@ function updateLightingHint() {
   }
 }
 
-function animate() {
+function animate(currentTime) {
   requestAnimationFrame(animate);
+  
+  if (!currentTime) currentTime = performance.now();
+  const deltaTime = (currentTime - lastTime) / 1000; // Converte para segundos
+  lastTime = currentTime;
+  
+  // Limita o delta time para evitar saltos grandes quando a aba está em background
+  const clampedDeltaTime = Math.min(deltaTime, 0.1);
 
-  updatePlayer();     // <- aqui faz a carrinha deslizar  
-  updateRoad();       // faz a estrada "andar"
-  updateObstacles();  // Atualiza os obstáculos
-  updateTrees();      // Atualiza as árvores
+  updatePlayer(clampedDeltaTime);     // Atualiza a posição e rotação da carrinha
+  updateRoad(clampedDeltaTime);       // Faz a estrada "andar"
+  updateObstacles(clampedDeltaTime);  // Atualiza os obstáculos com delta time
+  updateTrees(clampedDeltaTime);      // Atualiza as árvores
 
   document.getElementById('speed').textContent =
     'Velocidade: ' + getScrollSpeed().toFixed(2) + 'x';

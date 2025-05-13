@@ -246,7 +246,7 @@ function createRoadSegment() {
   return group;
 }
 
-export function updateRoad() {
+export function updateRoad(deltaTime = 0.016) {
   roadBlocks.forEach(block => {
     block.position.z += getScrollSpeed();
     // Quando sair da vista, recicla para trás

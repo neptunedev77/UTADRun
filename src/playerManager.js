@@ -1,16 +1,22 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'FBXLoader';
-
+import { getScrollSpeed } from './obstacleManager.js';
 
 const textureLoader = new THREE.TextureLoader();
 const texture = textureLoader.load('/assets/models/van/textures/van_03_a.png');
 
 let targetX = 0;
+let targetRotation = 0;
 let van;
 let currentLaneIndex = 1; // começa no meio
 const lanePositions = [-2.5, 0, 2.5];
 let headlightsOn = false;
 let leftHeadlight, rightHeadlight;
+
+// Fator de suavização para movimento (valor maior = movimento mais rápido)
+const movementSmoothness = 0.11; 
+// Ângulo máximo de rotação durante curvas (em radianos)
+const maxTurnAngle = Math.PI / 8;
 
 export function createPlayer(scene) {
   const loader = new FBXLoader();
@@ -82,11 +88,54 @@ export function setupPlayerControls() {
 
 function updateLanePosition() {
   targetX = lanePositions[currentLaneIndex];
+  
+  // Calcula o ângulo de rotação para as curvas baseado na direção do movimento
+  const moveDirection = targetX - van.position.x;
+  
+  // Se estiver virando para a esquerda, rotaciona no sentido anti-horário (valor negativo)
+  // Se estiver virando para a direita, rotaciona no sentido horário (valor positivo)
+  if (Math.abs(moveDirection) > 0.1) {
+    targetRotation = Math.PI - Math.sign(moveDirection) * maxTurnAngle;
+  }
 }
 
-export function updatePlayer() {
+export function updatePlayer(deltaTime = 0.016) {
   if (!van) return;
-  van.position.x += (targetX - van.position.x) * 0.1;
+  
+  // Obtém a velocidade atual do jogo
+  const currentGameSpeed = getScrollSpeed();
+  
+  // Calcula o fator de velocidade para rotação baseado na velocidade do jogo
+  // À medida que a velocidade aumenta, a rotação deve ser mais rápida
+  const speedScaleFactor = 1.0 + (currentGameSpeed / 0.3);
+  
+  // Fator de suavização baseado no delta time para movimento consistente
+  const movementSpeedFactor = movementSmoothness * (60 * deltaTime);
+  
+  // Fator de rotação que aumenta proporcionalmente à velocidade do jogo
+  const rotationSpeedFactor = movementSpeedFactor * speedScaleFactor;
+  
+  // Movimento horizontal com suavização
+  van.position.x += (targetX - van.position.x) * movementSpeedFactor * speedScaleFactor;
+  
+  // Rotação suavizada
+  // Calcula a diferença entre a rotação atual e a destino
+  const rotationDiff = targetRotation - van.rotation.y;
+  
+  // Normaliza a diferença para evitar problemas com valores próximos a PI
+  let normRotationDiff = rotationDiff;
+  if (normRotationDiff > Math.PI) normRotationDiff -= Math.PI * 2;
+  if (normRotationDiff < -Math.PI) normRotationDiff += Math.PI * 2;
+  
+  // Aplica a rotação suavizada com velocidade adaptativa
+  van.rotation.y += normRotationDiff * rotationSpeedFactor;
+  
+  // Quando estiver próximo ao destino, retorna gradualmente à rotação normal
+  // O limiar de proximidade também se adapta à velocidade (menor tolerância em altas velocidades)
+  const proximityThreshold = Math.max(0.1, 0.2 / speedScaleFactor);
+  if (Math.abs(targetX - van.position.x) < proximityThreshold) {
+    targetRotation = Math.PI; // Rotação padrão (virado para trás na tela)
+  }
 }
 
 export function getPlayerPosition() {

@@ -199,7 +199,7 @@ function randomSpawnZ() {
   return spawnZStart - Math.random() * 80; // spawn entre -80 e -20
 }
 
-let scrollSpeed = 0.5;
+let scrollSpeed = 0.3;
 export function getScrollSpeed() {
   return scrollSpeed;
 }
@@ -217,8 +217,8 @@ export function updateObstacles(deltaTime = 0.016) {
   const currentStep = Math.floor(timeElapsed / 2);
   
   if (currentStep > previousStep) {
-    scrollSpeed = Math.min(1.5, scrollSpeed + 0.02);
-    spacing = Math.max(4, 15 - timeElapsed * 0.1); // diminui com o tempo
+    scrollSpeed = Math.min(1.0, scrollSpeed + 0.01);
+    spacing = Math.max(5, 15 - timeElapsed * 0.08);
   }
   
 

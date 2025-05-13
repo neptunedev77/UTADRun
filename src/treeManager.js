@@ -76,7 +76,7 @@ function addTree(scene, x, z) {
 }
 
 // Atualiza a posição das árvores com base na velocidade de rolagem
-export function updateTrees() {
+export function updateTrees(deltaTime = 0.016) {
     if (trees.length === 0) return;
     
     const speed = getScrollSpeed();
