@@ -4,6 +4,7 @@ import { createRoad, updateRoad, toggleLights, getPostsLightsState } from './roa
 import { createPlayer, setupPlayerControls, updatePlayer, getPlayerPosition } from './playerManager.js';
 import { loadObstacles, updateObstacles, getScrollSpeed } from './obstacleManager.js';
 import { loadTrees, updateTrees } from './treeManager.js';
+import { createAnimatedHorse, updateAnimatedHorse } from './animatedHorse.js';
 
 let scene, camera, renderer;
 let lastTime = 0;
@@ -45,6 +46,7 @@ function init() {
 
   loadObstacles(scene); // Carrega os obstáculos na cena
   loadTrees(scene); // Carrega as árvores na cena
+  createAnimatedHorse(scene); // Cria o cavalo animado
 
   lastTime = performance.now();
   animate(); // Inicia a animação
@@ -80,6 +82,7 @@ function animate(currentTime) {
   updateRoad(clampedDeltaTime);       // Faz a estrada "andar"
   updateObstacles(clampedDeltaTime);  // Atualiza os obstáculos com delta time
   updateTrees(clampedDeltaTime);      // Atualiza as árvores
+  updateAnimatedHorse(clampedDeltaTime); // Atualiza o cavalo animado
 
   document.getElementById('speed').textContent =
     'Velocidade: ' + getScrollSpeed().toFixed(2) + 'x';
