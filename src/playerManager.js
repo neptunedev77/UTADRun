@@ -99,7 +99,7 @@ export function setupPlayerControls() {
     
     // Tecla W, espaço ou seta para cima para tocar a animação 1
     if (event.key === 'w' || event.key === ' ' || event.key === 'ArrowUp') {
-      playVanAnimation(0); // Indice 0 para a animação 1
+      playVanAnimation(1); // Indice 0 para a animação 1
     }
   });
 }
