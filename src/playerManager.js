@@ -75,13 +75,12 @@ export function setupPlayerControls() {
         currentLaneIndex++;
         updateLanePosition();
       }
-    }
-
-    // Tecla 4 para ligar/desligar os faróis
+    }    // Tecla 4 para ligar/desligar os faróis
     if (event.key === '4') {
       headlightsOn = !headlightsOn;
       if (leftHeadlight) leftHeadlight.visible = headlightsOn;
       if (rightHeadlight) rightHeadlight.visible = headlightsOn;
+      window.dispatchEvent(new CustomEvent('headlightsToggled'));
     }
   });
 }
@@ -143,3 +142,6 @@ export function getPlayerPosition() {
   return van.position.clone();
 }
 
+export function getHeadlightsState() {
+  return headlightsOn;
+}

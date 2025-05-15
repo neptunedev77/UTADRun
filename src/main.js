@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { setupScene, toggleLight, setCameraMode, getActiveCamera } from './sceneSetup.js';
 import { createRoad, updateRoad, toggleLights, getPostsLightsState } from './roadManager.js';
-import { createPlayer, setupPlayerControls, updatePlayer, getPlayerPosition } from './playerManager.js';
+import { createPlayer, setupPlayerControls, updatePlayer, getPlayerPosition, getHeadlightsState } from './playerManager.js';
 import { loadObstacles, updateObstacles, getScrollSpeed } from './obstacleManager.js';
 import { loadTrees, updateTrees } from './treeManager.js';
 import { createAnimatedHorse, updateAnimatedHorse } from './animatedHorse.js';
@@ -38,6 +38,10 @@ function init() {
     }
   });
 
+    window.addEventListener('headlightsToggled', () => {
+    updateLightingHint();
+  });
+
   const road = createRoad();
   scene.add(road);
   
@@ -50,6 +54,8 @@ function init() {
 
   lastTime = performance.now();
   animate(); // Inicia a animação
+
+  updateLightingHint();
 }
 
 // Função que atualiza o texto da interface com o estado das luzes
@@ -59,12 +65,16 @@ function updateLightingHint() {
     const cameraText = getActiveCamera() === camera ? 
                        "[C] Câmara Perspetiva" : 
                        "[C] Câmara Ortográfica";
-    
     const ambient = toggleLight('ambient', null, true) ? "ON" : "OFF";
     const directional = toggleLight('directional', null, true) ? "ON" : "OFF";
     const streetLights = getPostsLightsState() ? "ON" : "OFF";
+    const headlights = getHeadlightsState() ? "ON" : "OFF";
     
-    hintElement.textContent = `${cameraText} | Luzes: [1] Ambiente: ${ambient} | [2] Direcional: ${directional} | [3] Postes: ${streetLights}`;
+    hintElement.textContent = 
+      `${cameraText} | Luzes: [1] Ambiente: ${ambient}` +
+      ` | [2] Direcional: ${directional}` +
+      ` | [3] Postes: ${streetLights}` +
+      ` | [4] Faróis: ${headlights}`;
   }
 }
 
