@@ -13,6 +13,11 @@ const lanePositions = [-2.5, 0, 2.5];
 let headlightsOn = false;
 let leftHeadlight, rightHeadlight;
 
+// Variáveis para controle de animação
+let mixer;
+let animations = [];
+let isPlayingAnimation = false;
+
 // Fator de suavização para movimento (valor maior = movimento mais rápido)
 const movementSmoothness = 0.11; 
 // Ângulo máximo de rotação durante curvas (em radianos)
@@ -53,6 +58,13 @@ export function createPlayer(scene) {
     van.add(rightHeadlight);
     van.add(rightHeadlight.target);
 
+    // Configurar o mixer de animação e guardar as animações
+    if (fbx.animations && fbx.animations.length > 0) {
+      mixer = new THREE.AnimationMixer(van);
+      animations = fbx.animations;
+      console.log(`Carregadas ${animations.length} animações para a van`);
+    }
+
     scene.add(van);
   }, undefined, (error) => {
     console.error("Erro ao carregar .fbx:", error);
@@ -75,14 +87,60 @@ export function setupPlayerControls() {
         currentLaneIndex++;
         updateLanePosition();
       }
-    }    // Tecla 4 para ligar/desligar os faróis
+    }
+    
+    // Tecla 4 para ligar/desligar os faróis
     if (event.key === '4') {
       headlightsOn = !headlightsOn;
       if (leftHeadlight) leftHeadlight.visible = headlightsOn;
       if (rightHeadlight) rightHeadlight.visible = headlightsOn;
       window.dispatchEvent(new CustomEvent('headlightsToggled'));
     }
+    
+    // Tecla W, espaço ou seta para cima para tocar a animação 1
+    if (event.key === 'w' || event.key === ' ' || event.key === 'ArrowUp') {
+      playVanAnimation(0); // Indice 0 para a animação 1
+    }
   });
+}
+
+// Reproduz animação da carrinha
+function playVanAnimation(animationIndex) {
+  if (isPlayingAnimation) {
+    // Se já estiver a tocar uma animação, não faz nada
+    return;
+  }
+  
+  if (!mixer || !animations || animations.length === 0) {
+    console.warn('Erro ao carregar animações da carrinha.');
+    return;
+  }
+  
+  // Verifica se a animação existe
+  if (animationIndex >= animations.length) {
+    console.warn(`Animação ${animationIndex + 1} não existe. Total de animações: ${animations.length}`);
+    return;
+  }
+  
+  // Toca a animação selecionada
+  const animation = animations[animationIndex];
+  const action = mixer.clipAction(animation);
+  
+  action.setLoop(THREE.LoopOnce);
+  action.clampWhenFinished = true;
+  action.zeroSlopeAtEnd = true;
+  
+  mixer.stopAllAction();
+  mixer.removeEventListener('finished', onAnimationFinished);
+  mixer.addEventListener('finished', onAnimationFinished);
+  
+  action.fadeIn(0.2).play();
+  isPlayingAnimation = true;
+}
+
+function onAnimationFinished(e) {
+  isPlayingAnimation = false;
+  setTimeout(() => {}, 50);
 }
 
 function updateLanePosition() {
@@ -135,6 +193,11 @@ export function updatePlayer(deltaTime = 0.016) {
   if (Math.abs(targetX - van.position.x) < proximityThreshold) {
     targetRotation = Math.PI; // Rotação padrão (virado para trás na tela)
   }
+  
+  // Atualiza o mixer de animação, se existir
+  if (mixer) {
+    mixer.update(deltaTime);
+  }
 }
 
 export function getPlayerPosition() {
@@ -144,4 +207,12 @@ export function getPlayerPosition() {
 
 export function getHeadlightsState() {
   return headlightsOn;
+}
+
+export function isAnimationPlaying() {
+  return isPlayingAnimation;
+}
+
+export function getVanAnimationsCount() {
+  return animations ? animations.length : 0;
 }
