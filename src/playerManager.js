@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'FBXLoader';
 import { getScrollSpeed } from './obstacleManager.js';
+import { setupLights, setupLightControls, updateLights, cleanupLights, getLightState } from './lightManager.js';
 
 const textureLoader = new THREE.TextureLoader();
 const texture = textureLoader.load('/assets/models/van/textures/van_03_a.png');
@@ -10,8 +11,6 @@ let targetRotation = 0;
 let van;
 let currentLaneIndex = 1; // começa no meio
 const lanePositions = [-2.5, 0, 2.5];
-let headlightsOn = false;
-let leftHeadlight, rightHeadlight;
 
 // Variáveis para controle de animação
 let mixer;
@@ -43,21 +42,6 @@ export function createPlayer(scene) {
       }
     });
 
-    // Adiciona os faróis (SpotLight)
-    leftHeadlight = new THREE.SpotLight(0xffffff, 20, 60, Math.PI / 7, 0.3, 1);
-    leftHeadlight.position.set(-0.4, 0.7, 2.5); // posição na frente da van
-    leftHeadlight.target.position.set(-0.4, 0.3, 8); // alvo mais à frente
-    leftHeadlight.visible = headlightsOn;
-    van.add(leftHeadlight);
-    van.add(leftHeadlight.target);
-
-    rightHeadlight = new THREE.SpotLight(0xffffff, 20, 60, Math.PI / 7, 0.3, 1);
-    rightHeadlight.position.set(0.4, 0.7, 2.5);
-    rightHeadlight.target.position.set(0.4, 0.3, 8);
-    rightHeadlight.visible = headlightsOn;
-    van.add(rightHeadlight);
-    van.add(rightHeadlight.target);
-
     // Configurar o mixer de animação e guardar as animações
     if (fbx.animations && fbx.animations.length > 0) {
       mixer = new THREE.AnimationMixer(van);
@@ -66,6 +50,10 @@ export function createPlayer(scene) {
     }
 
     scene.add(van);
+    
+    // Setup all lights after van is loaded
+    setupLights(van);
+    setupLightControls();
   }, undefined, (error) => {
     console.error("Erro ao carregar .fbx:", error);
   });
@@ -89,13 +77,7 @@ export function setupPlayerControls() {
       }
     }
     
-    // Tecla 4 para ligar/desligar os faróis
-    if (event.key === '4') {
-      headlightsOn = !headlightsOn;
-      if (leftHeadlight) leftHeadlight.visible = headlightsOn;
-      if (rightHeadlight) rightHeadlight.visible = headlightsOn;
-      window.dispatchEvent(new CustomEvent('headlightsToggled'));
-    }
+    // Tecla 4 para ligar/desligar os faróis foi movida para lightManager.js
     
     // Tecla W, espaço ou seta para cima para tocar a animação 1
     if (event.key === 'w' || event.key === ' ' || event.key === 'ArrowUp') {
@@ -198,6 +180,9 @@ export function updatePlayer(deltaTime = 0.016) {
   if (mixer) {
     mixer.update(deltaTime);
   }
+  
+  // Atualiza as luzes
+  updateLights();
 }
 
 export function getPlayerPosition() {
@@ -206,7 +191,7 @@ export function getPlayerPosition() {
 }
 
 export function getHeadlightsState() {
-  return headlightsOn;
+  return getLightState().headlights;
 }
 
 export function isAnimationPlaying() {
