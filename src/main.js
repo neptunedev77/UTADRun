@@ -5,6 +5,8 @@ import { createPlayer, setupPlayerControls, updatePlayer, getPlayerPosition, get
 import { loadObstacles, updateObstacles, getScrollSpeed } from './obstacleManager.js';
 import { loadTrees, updateTrees } from './treeManager.js';
 import { createAnimatedHorse, updateAnimatedHorse } from './animatedHorse.js';
+import { updateDistance, getDistance } from './distanceTracker.js';
+import { loadDistanceSign, updateDistanceSign } from './distanceSignLoader.js';
 
 let scene, camera, renderer;
 let lastTime = 0;
@@ -51,6 +53,7 @@ function init() {
   loadObstacles(scene); // Carrega os obstáculos na cena
   loadTrees(scene); // Carrega as árvores na cena
   createAnimatedHorse(scene); // Cria o cavalo animado
+  loadDistanceSign(scene); // Carrega o letreiro de distância a partir do modelo FBX
 
   lastTime = performance.now();
   animate(); // Inicia a animação
@@ -93,9 +96,11 @@ function animate(currentTime) {
   updateObstacles(clampedDeltaTime);  // Atualiza os obstáculos com delta time
   updateTrees(clampedDeltaTime);      // Atualiza as árvores
   updateAnimatedHorse(clampedDeltaTime); // Atualiza o cavalo animado
+  updateDistance(clampedDeltaTime);   // Atualiza a distância percorrida
+  updateDistanceSign();               // Atualiza o letreiro de distância
 
   document.getElementById('speed').textContent =
-    'Velocidade: ' + getScrollSpeed().toFixed(2) + 'x';
+    'Velocidade: ' + getScrollSpeed().toFixed(2) + 'x | Distância: ' + Math.floor(getDistance()) + ' m';
 
   // Usa a câmera apropriada baseada no modo
   renderer.render(scene, getActiveCamera());
