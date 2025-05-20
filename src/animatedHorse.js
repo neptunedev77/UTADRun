@@ -3,20 +3,10 @@ import { FBXLoader } from 'FBXLoader';
 import { getScrollSpeed } from './obstacleManager.js';
 
 // Referência ao cavalo animado
-let animatedHorse = null;
 let horseGroup = null;
-let horseModel = null;
 
 // Parâmetros de animação
-let animationTime = 0;
-const ANIMATION_DURATION = 0.7; // Tempo ainda mais otimizado para um galope realista
-
-// Sistema de pernas artificiais
-let frontLeftLeg = null;
-let frontRightLeg = null;
-let hindLeftLeg = null;
-let hindRightLeg = null;
-let head = null;
+const ANIMATION_DURATION = 0.7;
 
 // Array para armazenar os cavalos na cena
 const horses = [];
@@ -63,7 +53,64 @@ function getRandomBetween(min, max) {
     return Math.random() * (max - min) + min;
 }
 
-// Criar o cavalo animado
+// Cria os alvos de morph (morph targets) para o cavalo
+function criarMorphTargets(mesh) {
+    // Criação de morph targets básicos
+    const position = mesh.geometry.attributes.position;
+    const morphPositions = [];
+    
+    // Criar 3 poses diferentes para o ciclo de galope
+    for (let i = 0; i < 3; i++) {
+        const morphPosition = position.clone();
+        morphPositions.push(morphPosition);
+    }
+    
+    // Adiciona os morph targets à geometria
+    for (let i = 0; i < morphPositions.length; i++) {
+        mesh.geometry.morphAttributes.position = mesh.geometry.morphAttributes.position || [];
+        mesh.geometry.morphAttributes.position[i] = morphPositions[i];
+    }
+    
+    // Atualiza a contagem de morph targets
+    mesh.morphTargetInfluences = [];
+    mesh.morphTargetDictionary = {};
+}
+
+// Atualiza os pesos dos morph targets com base no ciclo de animação
+function atualizarPesosMorph(cavalo, ciclo, intensidade) {
+    cavalo.traverse((child) => {
+        if (!child.isMesh || !child.morphTargetInfluences) return;
+        
+        // Ciclo de galope simplificado com 3 poses principais
+        const pesos = [0, 0, 0];
+        
+        if (ciclo < 0.33) {
+            // Primeira pose (pernas dianteiras estendidas)
+            const t = ciclo / 0.33;
+            pesos[0] = 1 - t;
+            pesos[1] = t;
+        } else if (ciclo < 0.66) {
+            // Segunda pose (meio do galope)
+            const t = (ciclo - 0.33) / 0.33;
+            pesos[1] = 1 - t;
+            pesos[2] = t;
+        } else {
+            // Terceira pose (pernas traseiras estendidas)
+            const t = (ciclo - 0.66) / 0.34;
+            pesos[2] = 1 - t;
+            pesos[0] = t;
+        }
+        
+        // Aplica os pesos com a intensidade
+        for (let i = 0; i < pesos.length; i++) {
+            if (child.morphTargetInfluences[i] !== undefined) {
+                child.morphTargetInfluences[i] = pesos[i] * intensidade;
+            }
+        }
+    });
+}
+
+// Carrega o cavalo com morph targets
 export function createAnimatedHorse(scene) {
     const loader = new FBXLoader();
     const textureLoader = new THREE.TextureLoader();
@@ -76,24 +123,54 @@ export function createAnimatedHorse(scene) {
     loader.load('./assets/models/obstaculos/cavalo.fbx', (horse) => {
         horse.scale.set(0.035, 0.035, 0.035);
         
-        // Aplica texturas ao modelo
+        // Processa o modelo para usar morph targets
         horse.traverse((child) => {
             if (child.isMesh) {
                 child.castShadow = true;
                 child.receiveShadow = true;
                 
+                // Configura o material
                 child.material = new THREE.MeshStandardMaterial({
                     map: diffuseMap,
                     roughnessMap: roughnessMap,
                     roughness: 0.7,
-                    metalness: 0.2
+                    metalness: 0.2,
+                    morphTargets: true // Habilita morph targets no material
                 });
+                
+                // Configura os morph targets para esta malha
+                if (child.geometry.morphAttributes.position) {
+                    // Se o modelo já tiver morph targets, apenas inicializa os arrays
+                    child.morphTargetInfluences = [];
+                    child.morphTargetDictionary = {};
+                    
+                    // Preenche com zeros para cada morph target
+                    for (let i = 0; i < child.geometry.morphAttributes.position.length; i++) {
+                        child.morphTargetInfluences.push(0);
+                    }
+                } else {
+                    // Se não houver morph targets, cria alguns básicos
+                    criarMorphTargets(child);
+                }
             }
         });
         
-        // Cria os cavalos em posições aleatórias pelo mapa, similar às árvores
+        // Adiciona o mixer de animação
+        const mixer = new THREE.AnimationMixer(horse);
+        horse.mixer = mixer;
+        
+        // Cria os cavalos em posições aleatórias pelo mapa
         generateHorses(scene, horse);
     });
+    
+    return {
+        // Retorna uma função para atualizar a animação
+        update: (deltaTime) => {
+            if (horseGroup && horseGroup.mixer) {
+                horseGroup.mixer.update(deltaTime);
+            }
+        }
+    };
 }
 
 // Função para gerar cavalos iniciais pelo mapa
@@ -218,7 +295,7 @@ export function updateAnimatedHorse(deltaTime) {
         // O cavalo se move para o horizonte
         horse.group.position.z += scrollSpeed * 2.0;
         
-        // Anima o galope para este cavalo
+        // Anima o galope para este cavalo usando morph targets
         animateHorseGallop(horse, cycle, scrollSpeed);
         
         // Se o cavalo se afastou muito no horizonte, reposiciona-o
@@ -233,191 +310,82 @@ export function updateAnimatedHorse(deltaTime) {
             const farthestZ = Math.min(...horses.map(h => h.group.position.z));
             
             // Posiciona este cavalo ainda mais longe com alguma variação
-            const zPos = farthestZ - 70 - Math.random() * 100; // Maior distância entre cavalos
+            const zPos = farthestZ - 70 - Math.random() * 100;
             
             // Reposiciona o cavalo com altura ajustada para o terreno
-            const groundLevel = -0.2; // Mesma altura ajustada
+            const groundLevel = -0.2;
             horse.group.position.set(xPos, groundLevel, zPos);
             
             // Nova rotação aleatória
             const rotationVariation = (Math.random() * 0.3) - 0.15;
             horse.group.rotation.y = rotationVariation;
             
-            // Redefine as rotações do modelo
-            horse.model.rotation.x = 0;
-            horse.model.rotation.z = 0;
-            horse.model.position.z = 0;
+            // Redefine as transformações do modelo
+            horse.model.rotation.set(0, 0, 0);
+            horse.model.position.set(0, 0, 0);
+            
+            // Reinicia os morph targets
+            if (horse.model.morphTargetInfluences) {
+                for (let i = 0; i < horse.model.morphTargetInfluences.length; i++) {
+                    horse.model.morphTargetInfluences[i] = 0;
+                }
+            }
         }
     });
 }
 
-// Anima o galope de um cavalo específico
+// Anima o galope de um cavalo específico usando morph targets
 function animateHorseGallop(horse, cycle, scrollSpeed) {
-    const legs = horse.legs;
     const horseModel = horse.model;
+    if (!horseModel) return;
     
-    if (!horseModel || !legs.frontLeft || !legs.frontRight || !legs.hindLeft || !legs.hindRight) return;
-    
-    // Intensidade baseada na velocidade do jogo - mais suave em velocidades mais baixas
+    // Intensidade baseada na velocidade do jogo
     const intensity = Math.min(1.5, 0.9 + scrollSpeed * 0.6);
     
-    // Altura do galope proporcional à velocidade - reduzida para evitar que pernas atravessem o chão
-    const height = Math.min(0.7, 0.4 + scrollSpeed * 0.3); // Reduzida a altura máxima do galope
+    // Altura do galope proporcional à velocidade
+    const height = Math.min(0.7, 0.4 + scrollSpeed * 0.3);
     
-    // Movimento vertical do cavalo durante o galope - trajetória mais natural
-    // Usa uma curva senoidal ajustada para simular o arco de salto no galope
-    const verticalPhase = (cycle * Math.PI * 2) - Math.PI / 4;
-    const verticalMovement = Math.sin(verticalPhase) * 0.6 * height; // Reduzida a amplitude vertical
+    // Atualiza os pesos dos morph targets para o ciclo de galope
+    atualizarPesosMorph(horseModel, cycle, intensity);
     
-    // Altura base ajustada para evitar que as pernas atravessem o chão ou que pareça flutuar
-    // O valor base é menor e a altura máxima do movimento vertical também é menor
-    horse.group.position.y = -0.2 + Math.max(0.1, verticalMovement); 
+    // Movimento vertical principal baseado no ciclo de galope
+    const galopePhase = (cycle * Math.PI * 2) - Math.PI / 4;
+    const verticalMovement = Math.sin(galopePhase) * 0.6 * height;
     
-    // Movimento horizontal sutil para simular o balanço para frente e para trás
+    // Ajusta a altura base do cavalo
+    const baseY = -0.2 + Math.max(0.1, verticalMovement);
+    horse.group.position.y = baseY;
+    
+    // Movimento horizontal sutil para frente/trás
     const horizontalSway = Math.sin(cycle * Math.PI * 4) * 0.08 * intensity;
-    // Usa a posição local Z para movimento frente/trás relativo ao cavalo
     horseModel.position.z = horizontalSway;
     
-    // Inclinação do corpo durante o galope - curva mais natural
-    // Usa uma diferença de fase para que o corpo incline antes de subir (física mais realista)
+    // Inclinação do corpo durante o galope
     const bodyPitchPhase = Math.sin(cycle * Math.PI * 2 - Math.PI/3);
-    const bodyPitch = bodyPitchPhase * 0.25 * intensity; // Reduzido para movimento mais realista
+    const bodyPitch = bodyPitchPhase * 0.25 * intensity;
     horseModel.rotation.x = bodyPitch;
     
-    // ===== CICLO COORDENADO DE GALOPE APRIMORADO =====
+    // Balanço lateral do corpo
+    const bodySway = Math.sin(cycle * Math.PI * 4) * 0.08 * intensity;
+    horseModel.rotation.z = bodySway;
     
-    // Pernas traseiras - movimento limitado para evitar atravessar o chão
-    if (cycle < 0.25) {
-        // Fase 1: Impulso poderoso - pernas traseiras empurram o solo
-        const t = cycle / 0.25;
-        // Ângulo reduzido para evitar atravessar o chão
-        const angle = lerp(0, -0.9, easeInQuad(t)) * intensity;
-        legs.hindLeft.rotation.x = angle;
-        legs.hindRight.rotation.x = angle - 0.15; // Mais defasada para naturalidade
-        
-        // Abertura lateral para realismo - aumenta com a força do impulso
-        legs.hindLeft.rotation.z = lerp(0.05, 0.15, t) * intensity;
-        legs.hindRight.rotation.z = lerp(-0.05, -0.15, t) * intensity;
-    } else if (cycle < 0.5) {
-        // Fase 2: Voo - pernas traseiras recolhidas com aceleração natural
-        const t = (cycle - 0.25) / 0.25;
-        // Ângulos ajustados para movimento mais realista
-        const angle = lerp(-0.9, 0.6, easeOutQuad(t)) * intensity;
-        legs.hindLeft.rotation.x = angle;
-        legs.hindRight.rotation.x = angle + 0.12; // Ligeiramente defasada
-        
-        // Abertura aumenta durante o voo - movimento mais fluido
-        legs.hindLeft.rotation.z = lerp(0.15, 0.25, t) * intensity;
-        legs.hindRight.rotation.z = lerp(-0.15, -0.25, t) * intensity;
-    } else if (cycle < 0.75) {
-        // Fase 3: Aterrissagem - movimento de preparação para o próximo passo
-        const t = (cycle - 0.5) / 0.25;
-        // Ângulos ajustados para movimento mais realista
-        const angle = lerp(0.6, 0.3, easeInOutQuad(t)) * intensity;
-        legs.hindLeft.rotation.x = angle;
-        legs.hindRight.rotation.x = angle - 0.15; // Defasada
-        
-        // Abertura diminui de forma suave
-        legs.hindLeft.rotation.z = lerp(0.25, 0.15, t) * intensity;
-        legs.hindRight.rotation.z = lerp(-0.25, -0.15, t) * intensity;
-    } else {
-        // Fase 4: Recuperação - preparando para novo impulso com aceleração natural
-        const t = (cycle - 0.75) / 0.25;
-        const angle = lerp(0.3, 0, easeInOutQuad(t)) * intensity;
-        legs.hindLeft.rotation.x = angle;
-        legs.hindRight.rotation.x = angle + 0.12; // Defasada
-        
-        // Retorno à posição inicial com movimento suave
-        legs.hindLeft.rotation.z = lerp(0.15, 0.05, t) * intensity;
-        legs.hindRight.rotation.z = lerp(-0.15, -0.05, t) * intensity;
-    }
-    
-    // Pernas dianteiras - movimento limitado para evitar atravessar o chão
-    if (cycle < 0.25) {
-        // Fase 1: Enquanto traseiras impulsionam, dianteiras se recolhem
-        const t = cycle / 0.25;
-        // Ângulo ajustado para movimento mais realista
-        const angle = lerp(0.3, 0.7, easeInOutQuad(t)) * intensity;
-        legs.frontLeft.rotation.x = angle;
-        legs.frontRight.rotation.x = angle + 0.15; // Mais defasada para naturalidade
-        
-        // Abertura lateral com variação suave
-        legs.frontLeft.rotation.z = lerp(0.05, 0.2, t) * intensity;
-        legs.frontRight.rotation.z = lerp(-0.05, -0.2, t) * intensity;
-    } else if (cycle < 0.5) {
-        // Fase 2: Pernas dianteiras estendendo para frente com aceleração natural
-        const t = (cycle - 0.25) / 0.25;
-        // Ângulo reduzido para evitar atravessar o chão
-        const angle = lerp(0.7, -0.5, easeInOutQuad(t)) * intensity;
-        legs.frontLeft.rotation.x = angle;
-        legs.frontRight.rotation.x = angle - 0.15; // Defasada
-        
-        // Abertura mantida durante extensão, variando suavemente
-        legs.frontLeft.rotation.z = lerp(0.2, 0.15, t) * intensity;
-        legs.frontRight.rotation.z = lerp(-0.2, -0.15, t) * intensity;
-    } else if (cycle < 0.75) {
-        // Fase 3: Pernas dianteiras tocam o chão/absorvem impacto
-        const t = (cycle - 0.5) / 0.25;
-        // Ângulo reduzido para evitar atravessar o chão
-        const angle = lerp(-0.5, -0.7, easeOutQuad(t)) * intensity;
-        legs.frontLeft.rotation.x = angle;
-        legs.frontRight.rotation.x = angle + 0.15; // Defasada
-        
-        // Abertura diminui ao tocar o solo
-        legs.frontLeft.rotation.z = lerp(0.15, 0.1, t) * intensity;
-        legs.frontRight.rotation.z = lerp(-0.15, -0.1, t) * intensity;
-    } else {
-        // Fase 4: Pernas dianteiras impulsionam para trás com aceleração natural
-        const t = (cycle - 0.75) / 0.25;
-        const angle = lerp(-0.7, 0.3, easeInQuad(t)) * intensity;
-        legs.frontLeft.rotation.x = angle;
-        legs.frontRight.rotation.x = angle - 0.15; // Defasada
-        
-        // Retorno à posição inicial
-        legs.frontLeft.rotation.z = lerp(0.1, 0.05, t) * intensity;
-        legs.frontRight.rotation.z = lerp(-0.1, -0.05, t) * intensity;
-    }
-    
-    // Animação realista da cabeça com movimento mais natural
-    const headBobPhase = (cycle * Math.PI * 2) + Math.PI/4; // Fase ajustada para seguir o corpo
-    legs.head.rotation.x = Math.sin(headBobPhase) * 0.35 * intensity;
-    // Movimento lateral sutilmente sincronizado com o ciclo de galope
-    legs.head.rotation.z = Math.sin(cycle * Math.PI * 4 + Math.PI/6) * 0.15 * intensity;
-    
-    // Balanço lateral do corpo para simular o movimento muscular
-    horseModel.rotation.z = Math.sin(cycle * Math.PI * 4) * 0.08 * intensity;
-    
-    // Efeito de respiração e contração muscular durante o galope
-    // Contração mais pronunciada durante o impulso
+    // Efeito de respiração e contração muscular
     const breathPhase = cycle * Math.PI * 4 + Math.PI/3;
-    const breatheFactor = 1.0 + Math.sin(breathPhase) * 0.12 * intensity;
-    horseModel.scale.y = 0.035 * breatheFactor;
+    const breatheFactor = 1.0 + Math.sin(breathPhase) * 0.06 * intensity;
     
-    // Variação da largura simulando contração muscular sincronizada com o ciclo
-    const widthPhase = cycle * Math.PI * 2 + Math.PI/6;
-    const widthFactor = 1.0 + Math.sin(widthPhase) * 0.05 * intensity;
-    horseModel.scale.x = 0.035 * widthFactor;
+    // Aplica a escala com variação síncrona à animação
+    const scaleBase = 0.035;
+    const scaleX = 1.0 + Math.sin(cycle * Math.PI * 4) * 0.03 * intensity;
+    const scaleY = breatheFactor;
+    const scaleZ = 1.0 + Math.sin(cycle * Math.PI * 4 + Math.PI/2) * 0.02 * intensity;
     
-    // Contração sutil de comprimento para simular a força muscular
-    const lengthPhase = cycle * Math.PI * 2;
-    const lengthFactor = 1.0 + Math.sin(lengthPhase) * 0.04 * intensity;
-    horseModel.scale.z = 0.035 * lengthFactor;
+    horseModel.scale.set(
+        scaleBase * scaleX,
+        scaleBase * scaleY,
+        scaleBase * scaleZ
+    );
+    
+    // Pequeno movimento vertical adicional para o modelo
+    const liftPhase = Math.sin(cycle * Math.PI * 2);
+    horseModel.position.y = Math.max(0, liftPhase * 0.05 * intensity);
 }
-
-// Funções de easing para movimentos mais naturais
-function easeInQuad(t) {
-    return t * t;
-}
-
-function easeOutQuad(t) {
-    return t * (2 - t);
-}
-
-function easeInOutQuad(t) {
-    return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-}
-
-// Função de interpolação linear
-function lerp(a, b, t) {
-    return a + (b - a) * t;
-} 

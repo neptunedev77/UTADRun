@@ -55,16 +55,18 @@ export function setupScene() {
   directionalLight = new THREE.DirectionalLight(0xfffacd, 1.2);
   directionalLight.position.set(0, 20, 10);
   directionalLight.castShadow = true; // Ativa sombras
-  directionalLight.shadow.mapSize.width = 2048;
-  directionalLight.shadow.mapSize.height = 2048;
-  directionalLight.shadow.camera.near = 0.5;
-  directionalLight.shadow.camera.far = 500;
+  directionalLight.shadow.mapSize.width = 1024;
+  directionalLight.shadow.mapSize.height = 1024;
+  directionalLight.shadow.camera.near = 1;
+  directionalLight.shadow.camera.far = 200;
+  directionalLight.shadow.bias = -0.001;
+  directionalLight.shadow.normalBias = 0.05;
   directionalLight.visible = lightStates.directional;
   scene.add(directionalLight);
 
   // Ativar sombras no renderer
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.BasicShadowMap;
 
   return { scene, camera, renderer };
 }

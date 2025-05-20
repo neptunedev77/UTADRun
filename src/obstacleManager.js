@@ -24,8 +24,7 @@ function createBuraco() {
   const material = new THREE.MeshStandardMaterial({
     map: texture,
     metalness: 0.2,
-    roughness: 0.8,
-    side: THREE.DoubleSide // garante visibilidade de ambos os lados
+    roughness: 0.8
   });
 
   const mesh = new THREE.Mesh(geometry, material);
@@ -46,8 +45,7 @@ function createConeDeTransito() {
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
 
-  // Geometria do cone
-  const coneGeometry = new THREE.ConeGeometry(0.75, 2, 32);
+  const coneGeometry = new THREE.ConeGeometry(0.75, 2, 16);
 
   // Material do cone usando a textura
   const coneMaterial = new THREE.MeshStandardMaterial({ 
@@ -116,9 +114,9 @@ export function loadObstacles(scene) {
           }
         });
       
-        fbx.userData = { type: name }; // <== mover aqui
-        obstacleTemplates[name] = fbx; // <== mover aqui
-        checkAllLoaded();              // <== manter aqui
+        fbx.userData = { type: name };
+        obstacleTemplates[name] = fbx;
+        checkAllLoaded();
       }, undefined, (error) => {
         console.error(`Erro ao carregar modelo ${name}:`, error);
       });
@@ -193,10 +191,6 @@ function getRandomTemplate() {
 function getRandomLaneX() {
   const index = Math.floor(Math.random() * lanePositions.length);
   return lanePositions[index];
-}
-
-function randomSpawnZ() {
-  return spawnZStart - Math.random() * 80; // spawn entre -80 e -20
 }
 
 let scrollSpeed = 0.3;

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'FBXLoader';
 import { getScrollSpeed } from './obstacleManager.js';
-import { setupLights, setupLightControls, updateLights, cleanupLights, getLightState } from './lightManager.js';
+import { setupLights, setupLightControls, updateLights, getLightState } from './lightManager.js';
 
 const textureLoader = new THREE.TextureLoader();
 const texture = textureLoader.load('/assets/models/van/textures/van_03_a.png');
@@ -33,7 +33,9 @@ export function createPlayer(scene) {
 
     van.traverse((child) => {
       if (child.isMesh) {
-        child.castShadow = false; // sem sombra
+        // Only enable shadows for the main body of the van
+        child.castShadow = child.name.includes('body') || child.name.includes('chassis');
+        child.receiveShadow = true;
         child.material = new THREE.MeshStandardMaterial({
           map: texture,
           metalness: 0.2,
@@ -76,8 +78,6 @@ export function setupPlayerControls() {
         updateLanePosition();
       }
     }
-    
-    // Tecla 4 para ligar/desligar os faróis foi movida para lightManager.js
     
     // Tecla W, espaço ou seta para cima para tocar a animação 1
     if (event.key === 'w' || event.key === ' ' || event.key === 'ArrowUp') {

@@ -94,7 +94,7 @@ function animate(currentTime) {
   updatePlayer(clampedDeltaTime);     // Atualiza a posição e rotação da carrinha
   updateRoad(clampedDeltaTime);       // Faz a estrada "andar"
   updateObstacles(clampedDeltaTime);  // Atualiza os obstáculos com delta time
-  updateTrees(clampedDeltaTime);      // Atualiza as árvores
+  updateTrees(clampedDeltaTime, scene); // Atualiza as árvores
   updateAnimatedHorse(clampedDeltaTime); // Atualiza o cavalo animado
   updateDistance(clampedDeltaTime);   // Atualiza a distância percorrida
   updateDistanceSign();               // Atualiza o letreiro de distância

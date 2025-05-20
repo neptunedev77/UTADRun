@@ -14,11 +14,20 @@ const maxTrees = 40;
 const minZ = -roadLength * numBlocks;
 const maxZ = 0;
 
-// Armazena todas as árvores na cena
-const trees = [];
+// Object pool para armazenar árvores ativas e inativas
+const treePool = {
+    active: [],
+    inactive: [],
+    maxActive: 40
+};
 
 // Array para armazenar os diferentes modelos de árvores
 let treeTemplates = [];
+
+// Cache para o cálculo de Z mais distante
+let cachedFarthestZ = 0;
+let lastZUpdateTime = 0;
+const Z_UPDATE_INTERVAL = 0.1; // Atualiza o cache a cada 100ms
 
 // Calcula uma posição X para a árvore baseada no lado escolhido
 function getTreeX(side) {
@@ -53,70 +62,119 @@ function doesTreeOverlapRoad(tree) {
 
 // Adiciona uma árvore à cena garantindo posição segura
 function addTree(scene, x, z) {
-    if (treeTemplates.length === 0) return;
+    if (treeTemplates.length === 0) return null;
     
-    const templateIndex = Math.floor(Math.random() * treeTemplates.length);
-    const treeTemplate = treeTemplates[templateIndex];
-    const tree = treeTemplate.clone();
+    let tree;
     
+    // Tenta reutilizar uma árvore inativa
+    if (treePool.inactive.length > 0) {
+        tree = treePool.inactive.pop();
+        tree.visible = true;
+    } 
+    // Se não houver árvores inativas e ainda não atingimos o máximo, cria uma nova
+    else if (treePool.active.length < treePool.maxActive) {
+        const templateIndex = Math.floor(Math.random() * treeTemplates.length);
+        const treeTemplate = treeTemplates[templateIndex];
+        tree = treeTemplate.clone();
+        scene.add(tree);
+    } else {
+        // Todas as árvores estão em uso
+        return null;
+    }
+    
+    // Configura a árvore
     const randomScale = getRandomBetween(0.5, 1.0);
     tree.scale.set(randomScale, randomScale, randomScale);
-    
-    tree.position.set(x, -0.5, z); 
+    tree.position.set(x, -0.5, z);
     tree.rotation.y = Math.random() * Math.PI * 2;
-
-    tree.updateMatrixWorld(true); 
-
+    tree.updateMatrixWorld(true);
+    
+    // Verifica sobreposição
     if (!doesTreeOverlapRoad(tree)) {
-        scene.add(tree);
-        trees.push(tree);
+        if (treePool.active.indexOf(tree) === -1) {
+            treePool.active.push(tree);
+        }
+        return tree;
     } else {
-        console.error(`Falha na geração da árvore devido à sobreposição, apesar de X=${x.toFixed(2)}. Árvore descartada.`);
+        console.warn(`Falha na geração da árvore devido à sobreposição em X=${x.toFixed(2)}.`);
+        // Se não for possível posicionar, retorna a árvore ao pool inativo
+        tree.visible = false;
+        if (treePool.active.indexOf(tree) !== -1) {
+            treePool.active = treePool.active.filter(t => t !== tree);
+        }
+        treePool.inactive.push(tree);
+        return null;
     }
 }
 
 // Atualiza a posição das árvores com base na velocidade de rolagem
-export function updateTrees(deltaTime = 0.016) {
-    if (trees.length === 0) return;
-    
+export function updateTrees(scene) {
     const speed = getScrollSpeed();
+    const now = performance.now() / 1000; // Tempo atual em segundos
     
-    trees.forEach(tree => {
+    // Atualiza o cache do Z mais distante apenas de vez em quando
+    if (now - lastZUpdateTime > Z_UPDATE_INTERVAL) {
+        cachedFarthestZ = treePool.active.length > 0 ? 
+            Math.min(...treePool.active.map(t => t.position.z)) : 0;
+        lastZUpdateTime = now;
+    }
+    
+    // Processa árvores ativas
+    for (let i = treePool.active.length - 1; i >= 0; i--) {
+        const tree = treePool.active[i];
         tree.position.z += speed;
         
+        // Se a árvore saiu da tela, recicla
         if (tree.position.z > 20) {
-            let attempts = 0;
             let newX, newZ;
             let overlaps = true;
-
-            while (overlaps && attempts < 10) { 
+            let attempts = 0;
+            
+            // Tenta encontrar uma posição válida
+            while (overlaps && attempts < 5) {
                 const side = Math.random() > 0.5 ? 'left' : 'right';
                 newX = getTreeX(side);
-
-                const farthestZ = Math.min(...trees.map(t => t.position.z));
-                newZ = Math.max(minZ, farthestZ - treeSpacing - Math.random() * 10);
-
-                tree.position.set(newX, -0.5, newZ);
-                const randomScale = getRandomBetween(0.5, 1.0);
-                tree.scale.set(randomScale, randomScale, randomScale);
-                tree.rotation.y = Math.random() * Math.PI * 2;
                 
-                tree.updateMatrixWorld(true); 
-
+                // Usa o valor em cache para o Z mais distante
+                newZ = Math.max(minZ, cachedFarthestZ - treeSpacing - Math.random() * 10);
+                
+                tree.position.set(newX, -0.5, newZ);
+                tree.scale.setScalar(getRandomBetween(0.5, 1.0));
+                tree.rotation.y = Math.random() * Math.PI * 2;
+                tree.updateMatrixWorld(true);
+                
                 overlaps = doesTreeOverlapRoad(tree);
                 attempts++;
-
-                if (overlaps) {
-                     console.warn(`Tentativa de reciclagem ${attempts} falhou na verificação de sobreposição (X=${newX.toFixed(2)}). Recalculando.`);
+            }
+            
+            // Se não encontrou uma posição válida, remove a árvore
+            if (overlaps) {
+                tree.visible = false;
+                treePool.active.splice(i, 1);
+                treePool.inactive.push(tree);
+            } else {
+                // Atualiza o Z mais distante se necessário
+                if (newZ < cachedFarthestZ) {
+                    cachedFarthestZ = newZ;
                 }
             }
-
-            if (overlaps) {
-                console.error(`Falha ao reciclar árvore sem sobreposição após ${attempts} tentativas. Colocando-a muito atrás.`);
-                tree.position.z = minZ - 100;
-            }
         }
-    });
+    }
+    
+    // Tenta adicionar novas árvores se necessário
+    while (treePool.active.length < treePool.maxActive) {
+        const side = Math.random() > 0.5 ? 'left' : 'right';
+        const x = getTreeX(side);
+        const z = getRandomBetween(cachedFarthestZ - treeSpacing * 2, cachedFarthestZ - treeSpacing);
+        
+        const tree = addTree(scene, x, z);
+        if (!tree) break; // Não foi possível adicionar mais árvores
+        
+        // Atualiza o Z mais distante se necessário
+        if (z < cachedFarthestZ) {
+            cachedFarthestZ = z;
+        }
+    }
 }
 
 // Função para carregar os modelos das árvores
@@ -129,10 +187,16 @@ export function loadTrees(scene) {
     loader.load('./assets/models/tree.fbx', (fbx) => {
         fbx.traverse((child) => {
             if (child.isMesh) {
-                child.castShadow = true;
+                const isMainTrunk = child.name && (child.name.includes('trunk') || child.name.includes('branch'));
+                child.castShadow = isMainTrunk;
                 child.receiveShadow = true;
-                child.material.map = treeTexture;
-                child.material.needsUpdate = true;
+            
+                if (child.material) {
+                    child.material = new THREE.MeshStandardMaterial({
+                        map: treeTexture
+                    });
+                    child.material.needsUpdate = true;
+                }
             }
         });
         
@@ -141,10 +205,16 @@ export function loadTrees(scene) {
         loader.load('./assets/models/tree2.fbx', (fbx2) => {
             fbx2.traverse((child) => {
                 if (child.isMesh) {
-                    child.castShadow = true;
+                    const isMainTrunk = child.name && (child.name.includes('trunk') || child.name.includes('branch'));
+                    child.castShadow = isMainTrunk;
                     child.receiveShadow = true;
-                    child.material.map = treeTexture;
-                    child.material.needsUpdate = true;
+                    
+                    if (child.material) {
+                        child.material = new THREE.MeshStandardMaterial({
+                            map: treeTexture
+                        });
+                        child.material.needsUpdate = true;
+                    }
                 }
             });
             
@@ -173,22 +243,34 @@ function generateTrees(scene) {
     
     let generatedCount = 0;
     let attempts = 0;
-    const maxAttempts = maxTrees * 3;
-
-    while(generatedCount < maxTrees && attempts < maxAttempts) {
+    const maxAttempts = treePool.maxActive * 3;
+    
+    // Limpa quaisquer árvores existentes
+    treePool.active.forEach(tree => {
+        tree.visible = false;
+        treePool.inactive.push(tree);
+    });
+    treePool.active = [];
+    
+    // Gera novas árvores
+    while (generatedCount < treePool.maxActive && attempts < maxAttempts) {
         const side = Math.random() > 0.5 ? 'left' : 'right';
         const x = getTreeX(side);
         const z = getRandomBetween(minZ, maxZ);
         
-        const countBeforeAdd = trees.length; 
-        addTree(scene, x, z);
-        
-        if (trees.length > countBeforeAdd) {
+        const tree = addTree(scene, x, z);
+        if (tree) {
             generatedCount++;
+            // Atualiza o Z mais distante
+            if (z < cachedFarthestZ) {
+                cachedFarthestZ = z;
+            }
         }
+        
         attempts++;
     }
-    if (generatedCount < maxTrees) {
-        console.warn(`Apenas foi possível gerar ${generatedCount}/${maxTrees} árvores sem sobreposição após ${attempts} tentativas.`);
+    
+    if (generatedCount < treePool.maxActive) {
+        console.warn(`Apenas foi possível gerar ${generatedCount}/${treePool.maxActive} árvores sem sobreposição após ${attempts} tentativas.`);
     }
 }
