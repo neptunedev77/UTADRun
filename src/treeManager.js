@@ -8,7 +8,6 @@ const grassWidth = 200;
 const roadLength = 60;
 const numBlocks = 3;
 const treeSpacing = 30;
-const maxTrees = 40;
 
 // Define os limites do eixo Z com base no comprimento da estrada
 const minZ = -roadLength * numBlocks;

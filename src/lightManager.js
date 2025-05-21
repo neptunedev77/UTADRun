@@ -126,13 +126,11 @@ export function setupLightControls() {
     
     // Mouse botão 1 (botão esquerdo) - indicador direito
     if (event.button === 0) {
-      console.log('Clique do botão esquerdo detectado - ativando indicador direito');
       toggleRightIndicator();
     }
     
     // Mouse botão 2 (botão direito) - indicador esquerdo
     if (event.button === 2) {
-      console.log('Clique do botão direito detectado - ativando indicador esquerdo');
       toggleLeftIndicator();
       // Prevenir o menu de contexto do botão direito
       event.preventDefault();
@@ -140,7 +138,6 @@ export function setupLightControls() {
     
     // Mouse botão 3 (botão do meio) - luzes de emergência
     if (event.button === 1) {
-      console.log('Clique do botão do meio detectado - ativando luzes de emergência');
       toggleHazardLights();
       // Prevenir o comportamento padrão do botão do meio (scroll)
       event.preventDefault();
@@ -176,9 +173,7 @@ function toggleLeftIndicator() {
   if (leftIndicator && rightIndicator) {
     rightIndicator = false;
   }
-  
-  console.log(`Indicador esquerdo: ${leftIndicator ? 'Ligado' : 'Desligado'}`);
-  
+    
   // Atualizar imediatamente a visibilidade das luzes
   updateLightsVisibility(true);
   
@@ -200,8 +195,6 @@ function toggleRightIndicator() {
     leftIndicator = false;
   }
   
-  console.log(`Indicador direito: ${rightIndicator ? 'Ligado' : 'Desligado'}`);
-  
   // Atualizar imediatamente a visibilidade das luzes
   updateLightsVisibility(true);
   
@@ -218,8 +211,6 @@ function toggleHazardLights() {
     leftIndicator = false;
     rightIndicator = false;
   }
-  
-  console.log(`Luzes de emergência: ${hazardLights ? 'Ligadas' : 'Desligadas'}`);
   
   // Atualizar imediatamente a visibilidade das luzes
   updateLightsVisibility(true);
@@ -286,9 +277,6 @@ function updateLightsVisibility(blinkState) {
     if (window.rightFrontIndicatorGlow) window.rightFrontIndicatorGlow.visible = false;
     if (window.rightRearIndicatorGlow) window.rightRearIndicatorGlow.visible = false;
   }
-  
-  // Verificar o console para debug
-  console.log(`Estado das luzes - Esquerda: ${leftIndicator}, Direita: ${rightIndicator}, Emergência: ${hazardLights}`);
 }
 
 export function updateLights() {
@@ -329,6 +317,4 @@ function toggleHeadlights() {
   });
   
   window.dispatchEvent(new CustomEvent('headlightsToggled'));
-  
-  console.log(`Faróis: ${headlightsOn ? 'Ligados' : 'Desligados'}`);
 }

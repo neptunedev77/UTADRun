@@ -6,37 +6,37 @@ let distanceSignTemplate;
 let distanceSigns = [];
 let scene;
 let lastSignDistance = 0;
-const signSpacing = 25; // Create a new sign every 25 meters
-const xPositions = [12, 15]; // Only right side positions
-const signDistance = 25; // Distance in game units from player position to sign creation point
+const signSpacing = 25; // Cria um novo sinal a cada 25 metros
+const xPositions = [12, 15]; // Posições apenas na lateral direita
+const signDistance = 25; // Distância em unidades do jogo da posição do jogador para a criação do sinal
 
-// Create the distance sign template using Three.js
+// Cria o modelo de sinal de distância usando Three.js
 export function loadDistanceSign(gameScene) {
     scene = gameScene;
     const textureLoader = new THREE.TextureLoader();
     
-    // Load the wood texture
+    // Carrega a textura de madeira
     const woodTexture = textureLoader.load('./assets/textures/wood.jpg');
     
-    // Create the sign template using Three.js
+    // Cria o modelo de sinal usando Three.js
     distanceSignTemplate = createDistanceSignMesh(woodTexture);
     
-    // Create the first sign at the first milestone
+    // Cria o primeiro sinal na primeira marcação
     createNewSignAtDistance(signSpacing);
 
-    // Adjust the initial position of the first sign to ensure it appears at 25 meters
+    // Ajusta a posição inicial do primeiro sinal para garantir que ele apareça a 25 metros
     if (distanceSigns.length > 0) {
         const firstSign = distanceSigns[0];
         firstSign.mesh.position.z = -signDistance + signSpacing;
     }
 }
 
-// Create a distance sign mesh using Three.js
+// Cria um modelo de sinal de distância usando Three.js
 function createDistanceSignMesh(woodTexture) {
     const signGroup = new THREE.Group();
     signGroup.name = "DistanceSign";
     
-    // Create the sign board - increased size to 4x2
+    // Cria a placa do sinal - aumentada para 4x2
     const signGeometry = new THREE.BoxGeometry(4, 2, 0.15);
     const signMaterial = new THREE.MeshStandardMaterial({
         map: woodTexture,
@@ -50,7 +50,7 @@ function createDistanceSignMesh(woodTexture) {
     signMesh.castShadow = true;
     signMesh.receiveShadow = true;
     
-    // Create post for the sign - made thicker and longer
+    // Cria a haste do sinal - feita mais grossa e mais longa
     const postGeometry = new THREE.BoxGeometry(0.25, 2, 0.25);
     const postMaterial = new THREE.MeshStandardMaterial({
         map: woodTexture,
@@ -64,7 +64,7 @@ function createDistanceSignMesh(woodTexture) {
     post.castShadow = true;
     post.receiveShadow = true;
     
-    // Create plane for the text area - increased to match new sign size
+    // Cria o plano para a área de texto - aumentado para corresponder ao novo tamanho do sinal
     const textGeometry = new THREE.PlaneGeometry(3.7, 1.7);
     const textMaterial = new THREE.MeshBasicMaterial({
         transparent: true,
@@ -83,28 +83,27 @@ function createDistanceSignMesh(woodTexture) {
     return signGroup;
 }
 
-// Create a new sign at the specified distance
+// Cria um novo sinal na distância especificada
 function createNewSignAtDistance(distance) {
     if (!distanceSignTemplate) return;
     
-    // Clone the template
+    // Clona o modelo
     const newSign = distanceSignTemplate.clone();
     
-    // Choose a position on the right side of the road
+    // Escolhe uma posição na lateral direita da estrada
     const xPos = xPositions[Math.floor(Math.random() * xPositions.length)];
     
-    // Place the sign at a fixed distance ahead of the player (in game units)
-    // This ensures it will reach the player exactly when the player reaches that distance
+    // Coloca o sinal a uma distância fixa à frente do jogador (em unidades do jogo)
     const zOffset = -signDistance;
     
-    // Position the sign
+    // Posiciona o sinal
     newSign.scale.set(1.5, 1.5, 1.5);
     newSign.position.set(xPos, 2, zOffset);
     
-    // Always face left since we're on the right side
+    // Sempre olha para a esquerda já que estamos na lateral direita
     newSign.rotation.y = -Math.PI / 4;
     
-    // Find the text area mesh and set up the distance display
+    // Encontra o mesh da área de texto e configura a exibição da distância
     let distanceTextMesh;
     newSign.traverse((child) => {
         if (child.name === "TextArea") {
@@ -113,79 +112,79 @@ function createNewSignAtDistance(distance) {
         }
     });
     
-    // Add to scene and store in our array
+    // Adiciona ao scene e armazena no nosso array
     scene.add(newSign);
     distanceSigns.push({
         mesh: newSign,
         distanceValue: distance,
         textMesh: distanceTextMesh,
-        shouldPassAt: distance // Store when this sign should pass the player
+        shouldPassAt: distance // Guarda quando este sinal deve passar pelo jogador
     });
     
-    // Update the last sign distance
+    // Atualiza a última distância do sinal
     lastSignDistance = distance;
 }
 
-// Create a dynamic text display for the distance
+// Cria um texto dinâmico para a distância
 function createTextDisplay(mesh, distance) {
     if (!mesh) return;
     
-    // Create canvas for the text - increased resolution
+    // Cria canvas para o texto
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
-    canvas.width = 1024;  // Doubled from 512
-    canvas.height = 512;  // Doubled from 256
+    canvas.width = 1024;
+    canvas.height = 512;
     
-    // Create texture from canvas
+    // Cria textura do canvas
     const texture = new THREE.CanvasTexture(canvas);
     
-    // Create material with the canvas texture
+    // Cria material com a textura do canvas
     const textMaterial = new THREE.MeshBasicMaterial({
         map: texture,
         transparent: true
     });
     
-    // Apply material to the text mesh
+    // Aplica material ao mesh do texto
     mesh.material = textMaterial;
     
-    // Initial update of the text
+    // Atualiza o texto inicial
     updateDistanceText(mesh, distance);
 }
 
-// Update the text on a specific sign
+// Atualiza o texto em um sinal específico
 function updateDistanceText(mesh, distance) {
     if (!mesh || !mesh.material || !mesh.material.map) return;
     
-    // Update canvas with new text
+    // Atualiza o canvas com o novo texto
     const canvas = mesh.material.map.image;
     const context = canvas.getContext('2d');
     
-    // Clear canvas
+    // Limpa o canvas
     context.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Add wood background with some transparency
+    // Adiciona fundo de madeira com alguma transparência
     context.fillStyle = 'rgba(130, 82, 39, 0.3)';
     context.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Add text - increased font sizes
+    // Adiciona texto
     context.fillStyle = 'white';
-    context.font = 'bold 100px Arial'; // Increased from 64px
+    context.font = 'bold 100px Arial';
     context.textAlign = 'center';
     context.textBaseline = 'middle';
     context.fillText('DISTÂNCIA', canvas.width / 2, canvas.height / 3);
     
-    context.font = 'bold 120px Arial'; // Increased from 72px
+    context.font = 'bold 120px Arial';
     context.fillText(distance + ' m', canvas.width / 2, canvas.height * 2/3);
     
-    // Update the texture
+    // Atualiza a textura
     mesh.material.map.needsUpdate = true;
 }
 
-// Update the signs - move them and create new ones as needed
+// Atualiza os sinais - move-os e cria novos quando necessário
 export function updateDistanceSign() {
     const currentDistance = Math.floor(getDistance());
     
-    // Check if we need to create a new sign
+    // Verifica se precisamos criar um novo sinal
     if (currentDistance - lastSignDistance >= signSpacing) {
         // Calculate the next milestone distance as exact multiple of signSpacing
         const nextSignDistance = Math.ceil(currentDistance / signSpacing) * signSpacing;
@@ -194,14 +193,14 @@ export function updateDistanceSign() {
         }
     }
     
-    // Update position of all signs
+    // Atualiza a posição de todos os sinais
     for (let i = distanceSigns.length - 1; i >= 0; i--) {
         const sign = distanceSigns[i];
         
-        // Move the sign towards the player
+        // Move o sinal para o jogador
         sign.mesh.position.z += getScrollSpeed();
         
-        // Remove signs that have passed the player
+        // Remove sinais que passaram pelo jogador
         if (sign.mesh.position.z > 10) {
             scene.remove(sign.mesh);
             distanceSigns.splice(i, 1);

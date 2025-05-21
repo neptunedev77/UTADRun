@@ -1,7 +1,6 @@
-import * as THREE from 'three';
 import { setupScene, toggleLight, setCameraMode, getActiveCamera } from './sceneSetup.js';
 import { createRoad, updateRoad, toggleLights, getPostsLightsState } from './roadManager.js';
-import { createPlayer, setupPlayerControls, updatePlayer, getPlayerPosition, getHeadlightsState } from './playerManager.js';
+import { createPlayer, setupPlayerControls, updatePlayer, getHeadlightsState } from './playerManager.js';
 import { loadObstacles, updateObstacles, getScrollSpeed } from './obstacleManager.js';
 import { loadTrees, updateTrees } from './treeManager.js';
 import { createAnimatedHorse, updateAnimatedHorse } from './animatedHorse.js';
@@ -94,7 +93,7 @@ function animate(currentTime) {
   updatePlayer(clampedDeltaTime);     // Atualiza a posição e rotação da carrinha
   updateRoad(clampedDeltaTime);       // Faz a estrada "andar"
   updateObstacles(clampedDeltaTime);  // Atualiza os obstáculos com delta time
-  updateTrees(clampedDeltaTime, scene); // Atualiza as árvores
+  updateTrees(scene);                 // Atualiza as árvores
   updateAnimatedHorse(clampedDeltaTime); // Atualiza o cavalo animado
   updateDistance(clampedDeltaTime);   // Atualiza a distância percorrida
   updateDistanceSign();               // Atualiza o letreiro de distância

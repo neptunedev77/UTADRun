@@ -2,25 +2,24 @@ import { getScrollSpeed } from './obstacleManager.js';
 
 let totalDistanceTraveled = 0;
 
-// Function to update the distance based on the scroll speed and delta time
+// Função para atualizar a distância baseada na velocidade de rolagem e delta time
 export function updateDistance(deltaTime) {
-    // Convert scroll speed to meters per second (scroll speed is a multiplier)
-    // Increased base speed from 10 to 20 meters per second to match sign distances
+    // Converte a velocidade de rolagem para metros por segundo
     const baseSpeed = 25; 
     const currentSpeed = baseSpeed * getScrollSpeed();
     
-    // Increase the distance based on the current speed and time passed
+    // Aumenta a distância baseada na velocidade atual e no tempo passado
     totalDistanceTraveled += currentSpeed * deltaTime;
     
     return totalDistanceTraveled;
 }
 
-// Function to get the current distance
+// Função para obter a distância atual
 export function getDistance() {
     return totalDistanceTraveled;
 }
 
-// Function to reset the distance counter
+// Função para resetar o contador de distância
 export function resetDistance() {
     totalDistanceTraveled = 0;
 } 
