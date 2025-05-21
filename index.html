@@ -10,8 +10,39 @@
     }
   </style>
   <link rel="stylesheet" href="./style.css" />
+  <style>
+    #loadingScreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #000;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-family: Arial, sans-serif;
+      z-index: 1000;
+    }
+    #loadingScreen h1 {
+      font-size: 3em;
+      margin-bottom: 20px;
+      color: #fff;
+      text-shadow: 0 0 10px rgba(255,255,255,0.5);
+    }
+    #loadingScreen p {
+      font-size: 1.5em;
+      color: #ccc;
+    }
+  </style>
 </head>
 <body>
+  <div id="loadingScreen">
+    <h1>UTAD RUN</h1>
+    <p>Pressione qualquer tecla para começar</p>
+  </div>
   <script async src="https://unpkg.com/es-module-shims@2.0.10/dist/es-module-shims.js"></script>
 
   <script type="importmap">

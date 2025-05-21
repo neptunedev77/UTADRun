@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { setupScene, toggleLight, setCameraMode, getActiveCamera } from './sceneSetup.js';
 import { createRoad, updateRoad, toggleLights, getPostsLightsState } from './roadManager.js';
 import { createPlayer, setupPlayerControls, updatePlayer, getHeadlightsState } from './playerManager.js';
@@ -25,14 +26,66 @@ let lastUIUpdate = 0;
 let fps = 0;
 let frameCount = 0;
 let lastFpsUpdate = 0;
-let isGameActive = true;
+let isGameActive = false; // Inicia como falso até o jogador pressionar uma tecla
+
+// Referência para o elemento da tela de carregamento
+const loadingScreen = document.getElementById('loadingScreen');
+
+// Função para mostrar/esconder a tela de carregamento
+function setLoadingScreen(visible) {
+  loadingScreen.style.display = visible ? 'flex' : 'none';
+}
+
+// Função para renderizar a tela de carregamento
+function renderLoadingScreen() {
+  // Não é mais necessário renderizar nada aqui, pois usamos HTML/CSS
+}
+
+// Função para iniciar o jogo quando uma tecla for pressionada
+function startGame() {
+  if (!isGameActive) {
+    isGameActive = true;
+    lastTime = performance.now() / 1000;
+    gameTime = 0;
+    setLoadingScreen(false); // Esconde a tela de carregamento
+    console.log('Game started!');
+  }
+}
+
+// Adicionar listener para teclado
+document.addEventListener('keydown', startGame);
 
 function init() {
+  // Mostrar a tela de carregamento
+  setLoadingScreen(true);
+  
+  // Inicializar cena do jogo
   const setup = setupScene(); 
   scene = setup.scene;
   camera = setup.camera;
   renderer = setup.renderer;
+  
+  // Configurar cor de fundo
+  renderer.setClearColor(0x000000);
 
+  // Carregar recursos do jogo em segundo plano
+  setTimeout(() => {
+    // Configurar controles do jogador
+    setupPlayerControls();
+    
+    // Carregar elementos do jogo
+    const road = createRoad();
+    scene.add(road);
+    
+    createPlayer(scene);
+    loadObstacles(scene);
+    loadTrees(scene);
+    createAnimatedHorse(scene);
+    loadDistanceSign(scene);
+    
+    console.log('Game resources loaded, waiting for key press...');
+  }, 100);
+  
   // Atalhos de teclado para mudar a câmara e iluminação
   window.addEventListener('keydown', (event) => {
     if (event.key.toLowerCase() === 'c') {
@@ -60,16 +113,7 @@ function init() {
     updateLightingHint();
   });
 
-  const road = createRoad();
-  scene.add(road);
-  
-  createPlayer(scene);
-  setupPlayerControls();
-
-  loadObstacles(scene);
-  loadTrees(scene);
-  createAnimatedHorse(scene);
-  loadDistanceSign(scene);
+  // Já carregado no setTimeout
   updateLightingHint();
 }
 
@@ -153,29 +197,38 @@ function updateUI() {
  * Loop principal de renderização
  * @param {number} currentTime - Timestamp atual
  */
-function render(currentTime) {
-    requestAnimationFrame(render);
-    
-    if (!currentTime) currentTime = performance.now();
-    
-    // Calcula o delta time em segundos e limita para evitar saltos grandes
-    let deltaTime = (currentTime - lastTime) / 1000;
-    deltaTime = Math.min(deltaTime, GAME_CONFIG.MAX_FRAME_TIME);
-    
-    // Atualiza o contador de FPS
+let lastFrameTime = performance.now();
+
+function animate(currentTime) {
+  // Garante que currentTime está definido
+  currentTime = currentTime || performance.now();
+  
+  // Calcula o delta time em segundos e limita para evitar saltos grandes
+  let deltaTime = (currentTime - lastFrameTime) / 1000;
+  deltaTime = Math.min(deltaTime, GAME_CONFIG.MAX_FRAME_TIME);
+  
+  // Atualiza o acumulador para a física
+  accumulator += deltaTime;
+  
+  // Se o jogo não estiver ativo, mostra a tela de carregamento
+  if (!isGameActive) {
+    renderLoadingScreen();
+  } else {
+    // Se o jogo estiver ativo, atualiza a lógica e renderiza a cena
     updateFpsCounter(currentTime);
     
-    // Atualiza o acumulador com o tempo decorrido
-    accumulator += deltaTime;
-    lastTime = currentTime;
-    
-    // Atualiza a lógica do jogo
+    // Atualiza a física do jogo
     updateGame(deltaTime);
     
     // Renderiza a cena
     if (scene && camera) {
-        renderer.render(scene, getActiveCamera());
+      renderer.render(scene, getActiveCamera());
     }
+  }
+  
+  lastFrameTime = currentTime;
+  // Agenda o próximo frame
+  requestAnimationFrame(animate);
 }
 
 /**
@@ -196,11 +249,16 @@ function updateFpsCounter(currentTime) {
 // Inicializa o jogo quando o documento estiver pronto
 document.addEventListener('DOMContentLoaded', () => {
     try {
+        // Inicializa a cena e o renderer primeiro
         init();
+        
+        // Configura o tempo inicial
         lastTime = performance.now();
         lastFpsUpdate = lastTime;
-        render(lastTime);
-        console.log('Jogo inicializado com sucesso!');
+        
+        // Inicia a animação
+        requestAnimationFrame(animate);
+        console.log('Jogo inicializado com sucesso! Pressione qualquer tecla para começar.');
     } catch (error) {
         console.error('Erro ao inicializar o jogo:', error);
         const errorElement = document.createElement('div');
