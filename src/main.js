@@ -7,8 +7,25 @@ import { createAnimatedHorse, updateAnimatedHorse } from './animatedHorse.js';
 import { updateDistance, getDistance } from './distanceTracker.js';
 import { loadDistanceSign, updateDistanceSign } from './distanceSignLoader.js';
 
+// Configuração do jogo
+const GAME_CONFIG = {
+    FPS: 60,
+    FIXED_TIMESTEP: 1 / 60,
+    MAX_FRAME_TIME: 0.2,
+    UI_UPDATE_INTERVAL: 100,
+    MAX_PHYSICS_STEPS: 10
+};
+
+// Estado do jogo
 let scene, camera, renderer;
+let gameTime = 0;
 let lastTime = 0;
+let accumulator = 0;
+let lastUIUpdate = 0;
+let fps = 0;
+let frameCount = 0;
+let lastFpsUpdate = 0;
+let isGameActive = true;
 
 function init() {
   const setup = setupScene(); 
@@ -46,21 +63,16 @@ function init() {
   const road = createRoad();
   scene.add(road);
   
-  createPlayer(scene); // Carrega o jogador na cena
-  setupPlayerControls(); // Configura os controlos do jogador
+  createPlayer(scene);
+  setupPlayerControls();
 
-  loadObstacles(scene); // Carrega os obstáculos na cena
-  loadTrees(scene); // Carrega as árvores na cena
-  createAnimatedHorse(scene); // Cria o cavalo animado
-  loadDistanceSign(scene); // Carrega o letreiro de distância a partir do modelo FBX
-
-  lastTime = performance.now();
-  animate(); // Inicia a animação
-
+  loadObstacles(scene);
+  loadTrees(scene);
+  createAnimatedHorse(scene);
+  loadDistanceSign(scene);
   updateLightingHint();
 }
 
-// Função que atualiza o texto da interface com o estado das luzes
 function updateLightingHint() {
   const hintElement = document.getElementById('cameraHint');
   if (hintElement) {
@@ -80,29 +92,130 @@ function updateLightingHint() {
   }
 }
 
-function animate(currentTime) {
-  requestAnimationFrame(animate);
-  
-  if (!currentTime) currentTime = performance.now();
-  const deltaTime = (currentTime - lastTime) / 1000; // Converte para segundos
-  lastTime = currentTime;
-  
-  // Limita o delta time para evitar saltos grandes quando a aba está em background
-  const clampedDeltaTime = Math.min(deltaTime, 0.1);
+/**
+ * Atualiza a lógica do jogo com passo de tempo fixo
+ * @param {number} deltaTime - Tempo desde a última atualização em segundos
+ */
+function updateGame(deltaTime) {
+    if (!isGameActive) return;
 
-  updatePlayer(clampedDeltaTime);     // Atualiza a posição e rotação da carrinha
-  updateRoad(clampedDeltaTime);       // Faz a estrada "andar"
-  updateObstacles(clampedDeltaTime);  // Atualiza os obstáculos com delta time
-  updateTrees(scene);                 // Atualiza as árvores
-  updateAnimatedHorse(clampedDeltaTime); // Atualiza o cavalo animado
-  updateDistance(clampedDeltaTime);   // Atualiza a distância percorrida
-  updateDistanceSign();               // Atualiza o letreiro de distância
-
-  document.getElementById('speed').textContent =
-    'Velocidade: ' + getScrollSpeed().toFixed(2) + 'x | Distância: ' + Math.floor(getDistance()) + ' m';
-
-  // Usa a câmera apropriada baseada no modo
-  renderer.render(scene, getActiveCamera());
+    // Atualiza o tempo total de jogo
+    gameTime += deltaTime;
+    
+    // Atualiza a física do jogo com passo de tempo fixo
+    let steps = 0;
+    while (accumulator >= GAME_CONFIG.FIXED_TIMESTEP && steps < GAME_CONFIG.MAX_PHYSICS_STEPS) {
+        // Atualiza a lógica do jogo com passo de tempo fixo
+        updatePlayer(GAME_CONFIG.FIXED_TIMESTEP);
+        updateRoad(GAME_CONFIG.FIXED_TIMESTEP);
+        updateObstacles(GAME_CONFIG.FIXED_TIMESTEP);
+        updateAnimatedHorse(GAME_CONFIG.FIXED_TIMESTEP);
+        updateDistance(GAME_CONFIG.FIXED_TIMESTEP);
+        
+        // Atualiza as árvores e o letreiro
+        updateTrees(scene);
+        updateDistanceSign();
+        
+        accumulator -= GAME_CONFIG.FIXED_TIMESTEP;
+        steps++;
+    }
+    
+    // Se estivermos atrasados, pula alguns frames para recuperar
+    if (accumulator > GAME_CONFIG.FIXED_TIMESTEP * 2) {
+        console.warn('Atraso na física do jogo, pulando frames...');
+        accumulator = 0;
+    }
+    
+    // Atualiza a UI com throttling
+    updateUI();
 }
 
-init();
+/**
+ * Atualiza a interface do utilizador
+ */
+function updateUI() {
+    const currentTime = performance.now();
+    
+    // Atualiza a UI apenas a cada UI_UPDATE_INTERVAL ms
+    if (currentTime - lastUIUpdate > GAME_CONFIG.UI_UPDATE_INTERVAL) {
+        const speedElement = document.getElementById('speed');
+        if (speedElement) {
+            speedElement.textContent = 
+                `Velocidade: ${getScrollSpeed().toFixed(2)}x | ` +
+                `Distância: ${Math.floor(getDistance())}m | ` +
+                `FPS: ${Math.round(fps)}`;
+        }
+        lastUIUpdate = currentTime;
+    }
+}
+
+/**
+ * Loop principal de renderização
+ * @param {number} currentTime - Timestamp atual
+ */
+function render(currentTime) {
+    requestAnimationFrame(render);
+    
+    if (!currentTime) currentTime = performance.now();
+    
+    // Calcula o delta time em segundos e limita para evitar saltos grandes
+    let deltaTime = (currentTime - lastTime) / 1000;
+    deltaTime = Math.min(deltaTime, GAME_CONFIG.MAX_FRAME_TIME);
+    
+    // Atualiza o contador de FPS
+    updateFpsCounter(currentTime);
+    
+    // Atualiza o acumulador com o tempo decorrido
+    accumulator += deltaTime;
+    lastTime = currentTime;
+    
+    // Atualiza a lógica do jogo
+    updateGame(deltaTime);
+    
+    // Renderiza a cena
+    if (scene && camera) {
+        renderer.render(scene, getActiveCamera());
+    }
+}
+
+/**
+ * Atualiza o contador de FPS
+ * @param {number} currentTime - Timestamp atual
+ */
+function updateFpsCounter(currentTime) {
+    frameCount++;
+    
+    // Atualiza o FPS a cada segundo
+    if (currentTime - lastFpsUpdate >= 1000) {
+        fps = frameCount * 1000 / (currentTime - lastFpsUpdate);
+        frameCount = 0;
+        lastFpsUpdate = currentTime;
+    }
+}
+
+// Inicializa o jogo quando o documento estiver pronto
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        init();
+        lastTime = performance.now();
+        lastFpsUpdate = lastTime;
+        render(lastTime);
+        console.log('Jogo inicializado com sucesso!');
+    } catch (error) {
+        console.error('Erro ao inicializar o jogo:', error);
+        const errorElement = document.createElement('div');
+        errorElement.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px;
+            background: #ffebee;
+            color: #c62828;
+            font-family: Arial, sans-serif;
+            z-index: 10000;
+        `;
+        errorElement.textContent = `Erro ao carregar o jogo: ${error.message}`;
+        document.body.prepend(errorElement);
+    }
+});

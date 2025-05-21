@@ -227,15 +227,36 @@ function createAnimatedHorse(scene) {
         }
     }
     
-    // Carregar o modelo FBX com tratamento de erros
-    loader.load(
-        './assets/models/obstaculos/cavalo.fbx',
-        (horse) => {
-            if (!horse) {
-                console.error('Falha ao carregar modelo de cavalo: Nenhum modelo retornado');
-                return;
-            }
+    // Função para carregar o modelo FBX
+    const loadHorseModel = () => {
+        return new Promise((resolve, reject) => {
+            // Tenta carregar o modelo
+            loader.load(
+                './assets/models/obstaculos/cavalo.fbx',
+                (horse) => {
+                    if (!horse) {
+                        console.error('Falha ao carregar modelo de cavalo: Nenhum modelo retornado');
+                        reject(new Error('Modelo de cavalo não carregado'));
+                        return;
+                    }
+                    resolve(horse);
+                },
+                // Progress callback
+                (xhr) => {
+                    console.log((xhr.loaded / xhr.total * 100) + '% carregado');
+                },
+                // Error callback
+                (error) => {
+                    console.error('Erro ao carregar modelo de cavalo:', error);
+                    reject(error);
+                }
+            );
+        });
+    };
 
+    // Carregar o modelo FBX com tratamento de erros
+    loadHorseModel()
+        .then((horse) => {
             try {
                 // Armazenar o modelo no estado
                 state.assets.model = horse;
@@ -269,11 +290,19 @@ function createAnimatedHorse(scene) {
             } catch (error) {
                 console.error('Erro ao processar modelo de cavalo:', error);
             }
-        },
-        (error) => {
-            console.error('Erro ao carregar modelo de cavalo:', error);
-        }
-    );
+        })
+        .catch((error) => {
+            console.error('Falha ao carregar o modelo de cavalo:', error);
+            // Aqui você pode adicionar um modelo de fallback ou mensagem de erro na cena
+            console.warn('Usando modelo de cavalo simplificado como fallback');
+            
+            // Cria um cubo como fallback para testes
+            const geometry = new THREE.BoxGeometry(2, 2, 4);
+            const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+            const fallbackHorse = new THREE.Mesh(geometry, material);
+            state.assets.model = fallbackHorse;
+            generateHorses(scene, fallbackHorse);
+        });
     
     return {
         update: (deltaTime) => updateAnimatedHorse(deltaTime)
