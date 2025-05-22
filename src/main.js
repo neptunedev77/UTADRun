@@ -27,6 +27,7 @@ let fps = 0;
 let frameCount = 0;
 let lastFpsUpdate = 0;
 let isGameActive = false; // Inicia como falso até o jogador pressionar uma tecla
+let isPaused = false;     // Variável para controlar o estado de pausa do jogo
 
 // Referência para o elemento da tela de carregamento
 const loadingScreen = document.getElementById('loadingScreen');
@@ -88,6 +89,11 @@ function init() {
   
   // Atalhos de teclado para mudar a câmara e iluminação
   window.addEventListener('keydown', (event) => {
+    // Tecla P para pausar/resumir o jogo
+    if (event.key.toLowerCase() === 'p') {
+      togglePause();
+    }
+    
     if (event.key.toLowerCase() === 'c') {
       // Toggle entre câmaras
       const currentMode = getActiveCamera() === camera ? 'orthographic' : 'default';
@@ -129,10 +135,57 @@ function updateLightingHint() {
     const headlights = getHeadlightsState() ? "ON" : "OFF";
     
     hintElement.textContent = 
-      `${cameraText} | Luzes: [1] Ambiente: ${ambient}` +
+      `${cameraText} | [P] Pausar | Luzes: [1] Ambiente: ${ambient}` +
       ` | [2] Direcional: ${directional}` +
       ` | [3] Postes: ${streetLights}` +
       ` | [4] Faróis: ${headlights}`;
+  }
+}
+
+// Função para pausar o jogo
+function togglePause() {
+  if (isGameActive) {
+    isPaused = !isPaused;
+    updatePauseScreen();
+    console.log(isPaused ? 'Game paused' : 'Game resumed');
+  }
+}
+
+// Função para mostrar/esconder a tela de pausa
+function updatePauseScreen() {
+  let pauseScreen = document.getElementById('pauseScreen');
+  
+  if (!pauseScreen && isPaused) {
+    // Criar a tela de pausa se não existir
+    pauseScreen = document.createElement('div');
+    pauseScreen.id = 'pauseScreen';
+    pauseScreen.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-family: Arial, sans-serif;
+      z-index: 999;
+    `;
+    
+    const pauseText = document.createElement('h2');
+    pauseText.textContent = 'JOGO PAUSADO';
+    pauseText.style.cssText = `
+      font-size: 3em;
+      text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    `;
+    
+    pauseScreen.appendChild(pauseText);
+    document.body.appendChild(pauseScreen);
+  } else if (pauseScreen && !isPaused) {
+    // Remover a tela de pausa
+    pauseScreen.remove();
   }
 }
 
@@ -141,7 +194,7 @@ function updateLightingHint() {
  * @param {number} deltaTime - Tempo desde a última atualização em segundos
  */
 function updateGame(deltaTime) {
-    if (!isGameActive) return;
+    if (!isGameActive || isPaused) return;
 
     // Atualiza o tempo total de jogo
     gameTime += deltaTime;
@@ -186,7 +239,7 @@ function updateUI() {
         if (speedElement) {
             speedElement.textContent = 
                 `Velocidade: ${getScrollSpeed().toFixed(2)}x | ` +
-                `Distância: ${Math.floor(getDistance())}m | ` +
+                `Pontuação: ${Math.floor(getDistance())}m | ` +
                 `FPS: ${Math.round(fps)}`;
         }
         lastUIUpdate = currentTime;
@@ -206,6 +259,13 @@ function animate(currentTime) {
   // Calcula o delta time em segundos e limita para evitar saltos grandes
   let deltaTime = (currentTime - lastFrameTime) / 1000;
   deltaTime = Math.min(deltaTime, GAME_CONFIG.MAX_FRAME_TIME);
+  
+  // Se o jogo estiver pausado, apenas atualiza o lastFrameTime para evitar saltos grandes
+  // quando o jogo for resumido, mas continua renderizando a cena congelada
+  if (isPaused) {
+    requestAnimationFrame(animate);
+    return;
+  }
   
   // Atualiza o acumulador para a física
   accumulator += deltaTime;

@@ -6,9 +6,10 @@ let distanceSignTemplate;
 let distanceSigns = [];
 let scene;
 let lastSignDistance = 0;
-const signSpacing = 25; // Cria um novo sinal a cada 25 metros
+const signSpacing = 100; // Cria um novo sinal a cada 100 metros
 const xPositions = [12, 15]; // Posições apenas na lateral direita
 const signDistance = 25; // Distância em unidades do jogo da posição do jogador para a criação do sinal
+const initialSignDistance = 10; // Distância para a placa inicial
 
 // Cria o modelo de sinal de distância usando Three.js
 export function loadDistanceSign(gameScene) {
@@ -21,14 +22,97 @@ export function loadDistanceSign(gameScene) {
     // Cria o modelo de sinal usando Three.js
     distanceSignTemplate = createDistanceSignMesh(woodTexture);
     
-    // Cria o primeiro sinal na primeira marcação
-    createNewSignAtDistance(signSpacing);
+    // Cria o sinal inicial aos 10 metros (placa de boas-vindas)
+    createWelcomeSign(initialSignDistance);
 
-    // Ajusta a posição inicial do primeiro sinal para garantir que ele apareça a 25 metros
-    if (distanceSigns.length > 0) {
-        const firstSign = distanceSigns[0];
-        firstSign.mesh.position.z = -signDistance + signSpacing;
-    }
+    // A próxima placa será aos 10 + 100 = 110 metros
+    lastSignDistance = initialSignDistance - 10;
+}
+
+// Cria a placa de boas-vindas
+function createWelcomeSign(distance) {
+    if (!distanceSignTemplate) return;
+    
+    // Clona o modelo
+    const welcomeSign = distanceSignTemplate.clone();
+    
+    // Escolhe uma posição na lateral direita da estrada
+    const xPos = xPositions[Math.floor(Math.random() * xPositions.length)];
+    
+    // Coloca o sinal a uma distância fixa à frente do jogador (em unidades do jogo)
+    const zOffset = -signDistance;
+    
+    // Posiciona o sinal
+    welcomeSign.scale.set(1.5, 1.5, 1.5);
+    welcomeSign.position.set(xPos, 2, zOffset - 15); // Posiciona mais longe para ser visível mais cedo
+    
+    // Sempre olha para a esquerda já que estamos na lateral direita
+    welcomeSign.rotation.y = -Math.PI / 4;
+    
+    // Encontra o mesh da área de texto e configura a exibição da mensagem de boas-vindas
+    let textMesh;
+    welcomeSign.traverse((child) => {
+        if (child.name === "TextArea") {
+            textMesh = child;
+            createWelcomeDisplay(textMesh);
+        }
+    });
+    
+    // Adiciona ao scene e armazena no nosso array
+    scene.add(welcomeSign);
+    distanceSigns.push({
+        mesh: welcomeSign,
+        distanceValue: distance,
+        textMesh: textMesh,
+        shouldPassAt: distance,
+        isWelcomeSign: true
+    });
+}
+
+// Cria o texto de boas-vindas
+function createWelcomeDisplay(mesh) {
+    if (!mesh) return;
+    
+    // Cria canvas para o texto
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    canvas.width = 1024;
+    canvas.height = 512;
+    
+    // Cria textura do canvas
+    const texture = new THREE.CanvasTexture(canvas);
+    
+    // Cria material com a textura do canvas
+    const textMaterial = new THREE.MeshBasicMaterial({
+        map: texture,
+        transparent: true
+    });
+    
+    // Aplica material ao mesh do texto
+    mesh.material = textMaterial;
+    
+    // Atualiza o canvas com o texto de boas-vindas
+    const canvasContext = canvas.getContext('2d');
+    
+    // Limpa o canvas
+    canvasContext.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Adiciona fundo de madeira com alguma transparência
+    canvasContext.fillStyle = 'rgba(130, 82, 39, 0.3)';
+    canvasContext.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Adiciona texto
+    canvasContext.fillStyle = 'white';
+    canvasContext.font = 'bold 80px Arial';
+    canvasContext.textAlign = 'center';
+    canvasContext.textBaseline = 'middle';
+    canvasContext.fillText('Bem-vindo à', canvas.width / 2, canvas.height / 3);
+    
+    canvasContext.font = 'bold 120px Arial';
+    canvasContext.fillText('UTAD!', canvas.width / 2, canvas.height * 2/3);
+    
+    // Atualiza a textura
+    texture.needsUpdate = true;
 }
 
 // Cria um modelo de sinal de distância usando Three.js
@@ -122,7 +206,7 @@ function createNewSignAtDistance(distance) {
     });
     
     // Atualiza a última distância do sinal
-    lastSignDistance = distance;
+    lastSignDistance = distance - 10;
 }
 
 // Cria um texto dinâmico para a distância
@@ -171,10 +255,10 @@ function updateDistanceText(mesh, distance) {
     context.font = 'bold 100px Arial';
     context.textAlign = 'center';
     context.textBaseline = 'middle';
-    context.fillText('DISTÂNCIA', canvas.width / 2, canvas.height / 3);
+    context.fillText('PONTUAÇÃO', canvas.width / 2, canvas.height / 3);
     
     context.font = 'bold 120px Arial';
-    context.fillText(distance + ' m', canvas.width / 2, canvas.height * 2/3);
+    context.fillText(distance - 10 + ' m', canvas.width / 2, canvas.height * 2/3);
     
     // Atualiza a textura
     mesh.material.map.needsUpdate = true;
@@ -186,8 +270,8 @@ export function updateDistanceSign() {
     
     // Verifica se precisamos criar um novo sinal
     if (currentDistance - lastSignDistance >= signSpacing) {
-        // Calculate the next milestone distance as exact multiple of signSpacing
-        const nextSignDistance = Math.ceil(currentDistance / signSpacing) * signSpacing;
+        // Calculate the next milestone distance as exact multiple of signSpacing + initialSignDistance
+        const nextSignDistance = initialSignDistance + (Math.ceil((currentDistance - initialSignDistance) / signSpacing) * signSpacing);
         if (nextSignDistance > lastSignDistance) {
             createNewSignAtDistance(nextSignDistance);
         }
