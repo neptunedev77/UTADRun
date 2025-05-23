@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'FBXLoader';
+import { addBeerCrateToObstacles } from './beerCrateManager.js';
+import { getPlayerPosition, startFlying, isVanFlying } from './playerManager.js';
 
 const obstacles = [];
 const obstacleTemplates = {};
@@ -13,7 +15,8 @@ const textureLoader = new THREE.TextureLoader();
 const modelList = [
   { name: 'cone', generator: createConeDeTransito },
   { name: 'cavalo', file: './assets/models/obstaculos/cavalo.fbx', scale: 0.02 },
-  { name: 'buraco', generator: createBuraco }
+  { name: 'buraco', generator: createBuraco },
+  { name: 'beerCrate', generator: () => null } // Will be added in loadObstacles
 ];
 
 // Gerador de buraco
@@ -126,6 +129,8 @@ export function loadObstacles(scene) {
   function checkAllLoaded() {
     loaded++;
     if (loaded === modelList.length) {
+      // Add beer crate to obstacle templates
+      addBeerCrateToObstacles(obstacleTemplates);
       generateObstacles(scene);
     }
   }
@@ -152,6 +157,8 @@ function generateObstacles(scene) {
       y = 0.25;
     } else if (name.includes('cavalo')) {
       y = 0.15;
+    } else if (name.includes('beercrate')) {
+      y = 0.1;
     }
 
     // espaçamento controlado com aleatoriedade leve
@@ -168,7 +175,8 @@ function getRandomTemplate() {
   const weightedList = [
     'cone', 'cone', 'cone', // 🎯 cones com mais peso
     'cavalo',               // 🐴 menos frequente
-    'buraco', 'buraco'      // buracos com chance média
+    'buraco', 'buraco',     // buracos com chance média
+    'beerCrate', 'beerCrate' // grade de cerveja
   ];
 
   let chosenName;
@@ -215,9 +223,14 @@ export function updateObstacles(deltaTime = 0.016) {
     spacing = Math.max(5, 15 - timeElapsed * 0.08);
   }
   
-
+  // Obter a posição atual do jogador para verificar colisões
+  const playerPosition = getPlayerPosition();
+  
   obstacles.forEach((obstacle) => {
     obstacle.position.z += scrollSpeed;
+    
+    // Verificar colisão com o jogador
+    checkCollision(obstacle, playerPosition);
 
     if (obstacle.position.z > 10) {
       // encontrar o mais afastado
@@ -242,6 +255,8 @@ export function updateObstacles(deltaTime = 0.016) {
         y = 0.25;
       } else if (name.includes('cavalo')) {
         y = 0.15;
+      } else if (name.includes('beercrate')) {
+        y = 0.1;
       }
 
       newClone.position.set(getRandomLaneX(), y, farthestZ - spacing - Math.random() * variation);
@@ -249,4 +264,45 @@ export function updateObstacles(deltaTime = 0.016) {
       obstacle.userData.type = newTemplate.userData?.type || name;
     }
   });
+}
+
+/**
+ * Verifica colisão entre o jogador e um obstáculo
+ * @param {THREE.Object3D} obstacle - O obstáculo a verificar
+ * @param {THREE.Vector3} playerPosition - A posição atual do jogador
+ */
+function checkCollision(obstacle, playerPosition) {
+  // Se o jogador já estiver voando, não verifica colisão
+  if (isVanFlying()) return;
+  
+  // Distância horizontal (X) entre o jogador e o obstáculo
+  const distanceX = Math.abs(obstacle.position.x - playerPosition.x);
+  
+  // Distância vertical (Y) entre o jogador e o obstáculo
+  const distanceY = Math.abs(obstacle.position.y - playerPosition.y);
+  
+  // Distância frontal (Z) entre o jogador e o obstáculo
+  const distanceZ = Math.abs(obstacle.position.z - playerPosition.z);
+  
+  // Limites de colisão (ajustar conforme necessário)
+  const collisionThresholdX = 1.5; // Largura da van + largura do obstáculo / 2
+  const collisionThresholdY = 1.0; // Altura da van + altura do obstáculo / 2
+  const collisionThresholdZ = 1.5; // Comprimento da van + comprimento do obstáculo / 2
+  
+  // Verifica se há colisão
+  if (distanceX < collisionThresholdX && 
+      distanceY < collisionThresholdY && 
+      distanceZ < collisionThresholdZ) {
+    
+    // Se colidir com uma grade de cerveja, faz a van voar
+    if (obstacle.userData.type === 'beerCrate') {
+      console.log('Colisão com grade de cerveja! Iniciando voo...');
+      startFlying();
+      
+      // Reposiciona a grade de cerveja para longe (como se tivesse sido destruída)
+      const farthestZ = Math.min(...obstacles.map(o => o.position.z));
+      obstacle.position.z = farthestZ - spacing - Math.random() * variation;
+      obstacle.position.x = getRandomLaneX();
+    }
+  }
 }
