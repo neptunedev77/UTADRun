@@ -30,6 +30,8 @@ let lastFpsUpdate = 0;
 let isGameActive = false; // Inicia como falso até o jogador pressionar uma tecla
 let isPaused = false;     // Variável para controlar o estado de pausa do jogo
 let showHitboxes = false;
+let playerLives = 3;
+let isGameOver = false;
 
 // Referência para o elemento da tela de carregamento
 const loadingScreen = document.getElementById('loadingScreen');
@@ -37,6 +39,7 @@ const loadingScreen = document.getElementById('loadingScreen');
 // Função para mostrar/esconder a tela de carregamento
 function setLoadingScreen(visible) {
   loadingScreen.style.display = visible ? 'flex' : 'none';
+  updateHeartsUI();
 }
 
 // Função para renderizar a tela de carregamento
@@ -198,12 +201,122 @@ function updatePauseScreen() {
   }
 }
 
+function createHeartsUI() {
+  let hearts = document.getElementById('heartsUI');
+  if (!hearts) {
+    hearts = document.createElement('div');
+    hearts.id = 'heartsUI';
+    hearts.style.cssText = `
+      position: fixed;
+      top: 24px;
+      left: 24px;
+      z-index: 1500;
+      display: flex;
+      gap: 16px;
+      pointer-events: none;
+      user-select: none;
+    `;
+    document.body.appendChild(hearts);
+  }
+}
+
+function updateHeartsUI() {
+  let hearts = document.getElementById('heartsUI');
+  if (!hearts) return;
+  // Limpa
+  hearts.innerHTML = '';
+  for (let i = 0; i < 3; i++) {
+    const heart = document.createElement('span');
+    heart.innerHTML = i < playerLives ? '❤️' : '🤍';
+    heart.style.fontSize = '3em';
+    heart.style.filter = i < playerLives ? '' : 'grayscale(1) opacity(0.5)';
+    heart.style.transition = 'filter 0.2s';
+    hearts.appendChild(heart);
+  }
+  // Esconde se game over ou loading
+  hearts.style.display = (isGameOver || loadingScreen.style.display === 'flex') ? 'none' : 'flex';
+}
+
+// Chamar na inicialização e sempre que vidas mudam
+createHeartsUI();
+updateHeartsUI();
+
+function showGameOverScreen() {
+  isGameOver = true;
+  isGameActive = false;
+  setLoadingScreen(false);
+  updatePauseScreen();
+  updateHeartsUI();
+  // Cria tela de Game Over
+  let gameOverScreen = document.getElementById('gameOverScreen');
+  if (!gameOverScreen) {
+    gameOverScreen = document.createElement('div');
+    gameOverScreen.id = 'gameOverScreen';
+    gameOverScreen.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.85);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-family: Arial, sans-serif;
+      z-index: 2000;
+    `;
+    const title = document.createElement('h1');
+    title.textContent = 'GAME OVER';
+    title.style.cssText = 'font-size: 4em; margin-bottom: 20px;';
+    const score = document.createElement('p');
+    score.id = 'finalScore';
+    score.style.cssText = 'font-size: 2em; margin-bottom: 30px;';
+    const restartBtn = document.createElement('button');
+    restartBtn.textContent = 'Recomeçar';
+    restartBtn.style.cssText = 'font-size: 1.5em; padding: 10px 30px; border-radius: 10px; border: none; background: #fff; color: #222; cursor: pointer;';
+    restartBtn.onclick = restartGame;
+    gameOverScreen.appendChild(title);
+    gameOverScreen.appendChild(score);
+    gameOverScreen.appendChild(restartBtn);
+    document.body.appendChild(gameOverScreen);
+  }
+  // Atualiza a pontuação final
+  document.getElementById('finalScore').textContent = `Pontuação: ${Math.floor(getDistance())}m`;
+}
+
+function hideGameOverScreen() {
+  let gameOverScreen = document.getElementById('gameOverScreen');
+  if (gameOverScreen) gameOverScreen.remove();
+  updateHeartsUI();
+}
+
+function restartGame() {
+  hideGameOverScreen();
+  playerLives = 3;
+  isGameOver = false;
+  isGameActive = false;
+  setLoadingScreen(true);
+  updateHeartsUI();
+  window.location.reload();
+}
+
+function loseLife() {
+  if (isGameOver) return;
+  playerLives--;
+  updateHeartsUI();
+  if (playerLives <= 0) {
+    showGameOverScreen();
+  }
+}
+
 /**
  * Atualiza a lógica do jogo com passo de tempo fixo
  * @param {number} deltaTime - Tempo desde a última atualização em segundos
  */
 function updateGame(deltaTime) {
-    if (!isGameActive || isPaused) return;
+    if (!isGameActive || isPaused || isGameOver) return;
 
     // Atualiza o tempo total de jogo
     gameTime += deltaTime;
@@ -251,6 +364,7 @@ function updateUI() {
                 `Pontuação: ${Math.floor(getDistance())}m | ` +
                 `FPS: ${Math.round(fps)}`;
         }
+        updateHeartsUI();
         lastUIUpdate = currentTime;
     }
 }
@@ -354,3 +468,5 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.prepend(errorElement);
     }
 });
+
+export { loseLife };

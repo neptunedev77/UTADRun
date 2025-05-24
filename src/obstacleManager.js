@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { FBXLoader } from 'FBXLoader';
 import { addBeerCrateToObstacles } from './beerCrateManager.js';
 import { getPlayerPosition, startFlying, isVanFlying } from './playerManager.js';
+import { loseLife } from './main.js';
 
 const obstacles = [];
 const obstacleTemplates = {};
@@ -309,6 +310,13 @@ function checkCollision(obstacle, playerPosition) {
       startFlying();
       
       // Reposiciona a grade de cerveja para longe (como se tivesse sido destruída)
+      const farthestZ = Math.min(...obstacles.map(o => o.position.z));
+      obstacle.position.z = farthestZ - spacing - Math.random() * variation;
+      obstacle.position.x = getRandomLaneX();
+    } else {
+      // Perde uma vida ao colidir com qualquer outro obstáculo
+      loseLife();
+      // Opcional: reposicionar obstáculo para evitar múltiplas perdas instantâneas
       const farthestZ = Math.min(...obstacles.map(o => o.position.z));
       obstacle.position.z = farthestZ - spacing - Math.random() * variation;
       obstacle.position.x = getRandomLaneX();
