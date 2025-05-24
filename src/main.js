@@ -327,7 +327,7 @@ function updateGame(deltaTime) {
         // Atualiza a lógica do jogo com passo de tempo fixo
         updatePlayer(GAME_CONFIG.FIXED_TIMESTEP);
         updateRoad(GAME_CONFIG.FIXED_TIMESTEP);
-        updateObstacles(GAME_CONFIG.FIXED_TIMESTEP);
+        updateObstacles(GAME_CONFIG.FIXED_TIMESTEP, scene);
         updateAnimatedHorse(GAME_CONFIG.FIXED_TIMESTEP);
         updateDistance(GAME_CONFIG.FIXED_TIMESTEP);
         

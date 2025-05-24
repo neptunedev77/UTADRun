@@ -16,7 +16,6 @@ const textureLoader = new THREE.TextureLoader();
 const modelList = [
   { name: 'cone', generator: createConeDeTransito },
   { name: 'cavalo', file: './assets/models/obstaculos/cavalo.fbx', scale: 0.02 },
-  { name: 'buraco', generator: createBuraco },
   { name: 'tampa', file: './assets/models/obstaculos/tampa.fbx', scale: 0.0015 },
   { name: 'beerCrate', generator: () => null } // Will be added in loadObstacles
 ];
@@ -150,47 +149,41 @@ function generateObstacles(scene) {
   const variation = 5; // aleatoriedade permitida
 
   for (let i = 0; i < maxObstacles; i++) {
-    const template = getRandomTemplate();
+    const { template, type } = getRandomTemplate();
     if (!template) continue;
 
     const clone = template.clone();
-    const name = clone.name.toLowerCase(); // define o nome primeiro
-    clone.userData.type = template.userData?.type || name; // depois atribuis
-    
+    clone.userData.type = type; // <- só o principal!
+    lastObstacleType = type;
 
     let y = 0.051;
-    if (clone.geometry?.type === 'CircleGeometry' || name.includes('tampa')) {
-      y = name.includes('tampa') ? 0.09 : 0.07;
-    } else if (name.includes('cone')) {
+    if (clone.geometry?.type === 'CircleGeometry' || type.includes('tampa')) {
+      y = type.includes('tampa') ? 0.09 : 0.07;
+    } else if (type.includes('cone')) {
       y = 0.25;
-    } else if (name.includes('cavalo')) {
+    } else if (type.includes('cavalo')) {
       y = 0.15;
-    } else if (name.includes('beercrate')) {
+    } else if (type.includes('beercrate')) {
       y = 0.1;
     }
 
-    // espaçamento controlado com aleatoriedade leve
     const z = baseZ - i * spacing - Math.random() * variation;
-
     clone.position.set(getRandomLaneX(), y, z);
     scene.add(clone);
     obstacles.push(clone);
   }
 }
 
-
 function getRandomTemplate() {
   const weightedList = [
-    'cone', 'cone', 'cone', // 🎯 cones com mais peso
-    'cavalo',               // 🐴 menos frequente
-    'buraco',               // buracos com chance média
-    'tampa',                // tampa de esgoto
-    'beerCrate', 'beerCrate' // grade de cerveja
+    'cone', 'cone', 'cone',  // Cones com mais peso
+    'cavalo',                // Menos frequente
+    'tampa', 'tampa',        // Tampa de esgoto
+    'beerCrate',  // Grade de cerveja
   ];
 
   let chosenName;
   let attempts = 0;
-  
   do {
     const randIndex = Math.floor(Math.random() * weightedList.length);
     chosenName = weightedList[randIndex];
@@ -201,10 +194,8 @@ function getRandomTemplate() {
     obstacleTemplates[chosenName]?.userData?.type === lastObstacleType &&
     attempts++ < 10
   );
-
-  return obstacleTemplates[chosenName];
+  return { template: obstacleTemplates[chosenName], type: chosenName };
 }
-
 
 function getRandomLaneX() {
   const index = Math.floor(Math.random() * lanePositions.length);
@@ -221,7 +212,7 @@ let variation = 5;
 let lastObstacleType = null;
 let timeElapsed = 0;
 
-export function updateObstacles(deltaTime = 0.016) {
+export function updateObstacles(deltaTime = 0.016, scene) {
   timeElapsed += deltaTime;
 
   // Aumentar dificuldade
@@ -249,29 +240,35 @@ export function updateObstacles(deltaTime = 0.016) {
       const farthestZ = Math.min(...obstacles.map(o => o.position.z));
 
       // evitar mesmo tipo seguido
-      let newTemplate;
+      let newTemplateObj;
       do {
-        newTemplate = getRandomTemplate();
-      } while (newTemplate.userData?.type === lastObstacleType);
+        newTemplateObj = getRandomTemplate();
+      } while (newTemplateObj.type === lastObstacleType);
 
-      const newClone = newTemplate.clone();
-      const name = newClone.name?.toLowerCase() || 'obstaculo';
-      lastObstacleType = newTemplate.userData?.type || name;
+      const newClone = newTemplateObj.template.clone();
+      const type = newTemplateObj.type;
+      lastObstacleType = type;
 
       let y = 0.051;
-      if (newClone.geometry?.type === 'CircleGeometry' || name.includes('tampa')) {
-        y = name.includes('tampa') ? 0.09 : 0.07;
-      } else if (name.includes('cone')) {
+      if (newClone.geometry?.type === 'CircleGeometry' || type.includes('tampa')) {
+        y = type.includes('tampa') ? 0.09 : 0.07;
+      } else if (type.includes('cone')) {
         y = 0.25;
-      } else if (name.includes('cavalo')) {
+      } else if (type.includes('cavalo')) {
         y = 0.15;
-      } else if (name.includes('beercrate')) {
+      } else if (type.includes('beercrate')) {
         y = 0.1;
       }
 
       newClone.position.set(getRandomLaneX(), y, farthestZ - spacing - Math.random() * variation);
-      obstacle.position.copy(newClone.position);
-      obstacle.userData.type = newTemplate.userData?.type || name;
+      // --- ALTERAÇÃO AQUI ---
+      // Remove o antigo da cena
+      scene.remove(obstacle);
+      // Adiciona o novo à cena
+      scene.add(newClone);
+      // Substitui o antigo pelo novo no array obstacles
+      obstacles[obstacles.indexOf(obstacle)] = newClone;
+
     }
   });
 }
