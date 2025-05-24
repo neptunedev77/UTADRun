@@ -42,6 +42,12 @@ const MAX_FLYING_SPEED = 4;       // Velocidade máxima reduzida
 const TILT_FACTOR = 0.1;
 const CAMERA_SHAKE_INTENSITY = 0.2; // Trepidação reduzida
 
+// Variáveis para salto
+let isJumping = false;
+let jumpStartTime = 0;
+let jumpDuration = 0.7; // segundos (ajustável)
+let jumpHeight = 1.25; // altura máxima do salto (ajustável)
+
 // Partículas do rastro do foguete
 function createRocketTrail() {
   return {
@@ -238,10 +244,11 @@ export function setupPlayerControls() {
         updateLanePosition();
       }
     }
-    
-    // Tecla W, espaço ou seta para cima para tocar a animação 1
-    if ((event.key === 'w' || event.key === ' ' || event.key === 'ArrowUp') && !isVanFlying()) {
-      playVanAnimation(1); // Indice 0 para a animação 1
+    // Salto real: espaço ou seta para cima (se não está a saltar nem a voar)
+    if ((event.key === ' ' || event.key === 'ArrowUp') && !isVanFlying() && !isJumping) {
+      isJumping = true;
+      jumpStartTime = performance.now() / 1000;
+      playVanAnimation(1); // Animação de salto, se existir
     }
   });
 }
@@ -346,6 +353,20 @@ export function updatePlayer(deltaTime = 0.016) {
   
   // Atualiza as luzes
   updateLights();
+  
+  // Atualiza o salto
+  if (isJumping) {
+    const now = performance.now() / 1000;
+    const t = (now - jumpStartTime) / jumpDuration;
+    if (t >= 1) {
+      isJumping = false;
+      van.position.y = 1;
+    } else {
+      // Movimento parabólico (ease)
+      const jumpY = Math.sin(Math.PI * t) * jumpHeight;
+      van.position.y = 1 + jumpY;
+    }
+  }
 }
 
 export function getPlayerPosition() {
@@ -754,3 +775,8 @@ window.clearHitboxes = (function(oldClear) {
     if (typeof oldClear === 'function') oldClear(scene);
   };
 })(window.clearHitboxes);
+
+// Export para saber se está a saltar
+export function isVanJumping() {
+  return isJumping;
+}

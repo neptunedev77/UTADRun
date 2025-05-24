@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'FBXLoader';
 import { addBeerCrateToObstacles } from './beerCrateManager.js';
-import { getPlayerPosition, startFlying, isVanFlying } from './playerManager.js';
+import { getPlayerPosition, startFlying, isVanFlying, isVanJumping } from './playerManager.js';
 import { loseLife } from './main.js';
 
 const obstacles = [];
@@ -281,42 +281,47 @@ export function updateObstacles(deltaTime = 0.016, scene) {
 function checkCollision(obstacle, playerPosition) {
   // Se o jogador já estiver voando, não verifica colisão
   if (isVanFlying()) return;
-  
+
   // Distância horizontal (X) entre o jogador e o obstáculo
   const distanceX = Math.abs(obstacle.position.x - playerPosition.x);
-  
   // Distância vertical (Y) entre o jogador e o obstáculo
   const distanceY = Math.abs(obstacle.position.y - playerPosition.y);
-  
   // Distância frontal (Z) entre o jogador e o obstáculo
   const distanceZ = Math.abs(obstacle.position.z - playerPosition.z);
-  
   // Limites de colisão (ajustar conforme necessário)
-  const collisionThresholdX = 1.5; // Largura da van + largura do obstáculo / 2
-  const collisionThresholdY = 1.0; // Altura da van + altura do obstáculo / 2
-  const collisionThresholdZ = 1.5; // Comprimento da van + comprimento do obstáculo / 2
-  
-  // Verifica se há colisão
-  if (distanceX < collisionThresholdX && 
-      distanceY < collisionThresholdY && 
-      distanceZ < collisionThresholdZ) {
-    // Debug: logar tipo do obstáculo
-    console.log('Colisão! Tipo:', obstacle.userData.type, 'van.y:', playerPosition.y, 'obstáculo.y:', obstacle.position.y, 'diferença:', Math.abs(obstacle.position.y - playerPosition.y));
-    if (obstacle.userData.type === 'beerCrate') {
-      // Só a beer crate faz voar
-      startFlying();
-      // Reposiciona a grade de cerveja para longe (como se tivesse sido destruída)
+  const collisionThresholdX = 1.5;
+  const collisionThresholdY = 1.0;
+  const collisionThresholdZ = 1.5;
+
+  // Se for cavalo, verifica colisão apenas em X e Z (ignora altura)
+  if (obstacle.userData.type === 'cavalo') {
+    if (distanceX < collisionThresholdX && distanceZ < collisionThresholdZ) {
+      // Sempre perde vida ao tocar no cavalo
+      loseLife();
       const farthestZ = Math.min(...obstacles.map(o => o.position.z));
       obstacle.position.z = farthestZ - spacing - Math.random() * variation;
       obstacle.position.x = getRandomLaneX();
-      obstacle.userData.type = 'beerCrate'; // reforça tipo
+      obstacle.userData.type = obstacle.userData.type;
+    }
+    return;
+  }
+
+  // Para outros obstáculos, se está a saltar e suficientemente alto, ignora colisão
+  if (isVanJumping() && playerPosition.y > 1.7) return;
+
+  // Verifica colisão normal
+  if (distanceX < collisionThresholdX && distanceY < collisionThresholdY && distanceZ < collisionThresholdZ) {
+    if (obstacle.userData.type === 'beerCrate') {
+      startFlying();
+      const farthestZ = Math.min(...obstacles.map(o => o.position.z));
+      obstacle.position.z = farthestZ - spacing - Math.random() * variation;
+      obstacle.position.x = getRandomLaneX();
+      obstacle.userData.type = 'beerCrate';
     } else {
       loseLife();
-      // Reposiciona obstáculo para evitar múltiplas perdas instantâneas
       const farthestZ = Math.min(...obstacles.map(o => o.position.z));
       obstacle.position.z = farthestZ - spacing - Math.random() * variation;
       obstacle.position.x = getRandomLaneX();
-      // reforça tipo correto
       obstacle.userData.type = obstacle.userData.type;
     }
   }

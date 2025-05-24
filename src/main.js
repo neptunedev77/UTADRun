@@ -8,6 +8,7 @@ import { createAnimatedHorse, updateAnimatedHorse } from './animatedHorse.js';
 import { updateDistance, getDistance } from './distanceTracker.js';
 import { loadDistanceSign, updateDistanceSign } from './distanceSignLoader.js';
 import { createBeerCrate } from './beerCrateManager.js';
+import './easterEggConfetti.js';
 
 // Configuração do jogo
 const GAME_CONFIG = {
