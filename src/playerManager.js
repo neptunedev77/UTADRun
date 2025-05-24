@@ -582,6 +582,7 @@ function updateFlyingState(deltaTime) {
   } else if (progress >= 0.8) {
     phase = 'descend';
   }
+  currentFlightPhase = phase;
   
   // Aplica forças e acelerações baseadas na fase
   if (phase === 'climb') {
@@ -875,4 +876,26 @@ window.clearHitboxes = (function(oldClear) {
 // Export para saber se está a saltar
 export function isVanJumping() {
   return isJumping;
+}
+
+export function getFlyingStartTime() {
+  return flyingStartTime;
+}
+
+export function getFlyingDuration() {
+  return flyingDuration;
+}
+
+let currentFlightPhase = null;
+
+export function isVanDescending() {
+  return isFlying && currentFlightPhase === 'descend';
+}
+
+export function getFlyingTimeLeft() {
+  if (!isFlying) return 0;
+  const now = performance.now() / 1000;
+  const elapsed = now - flyingStartTime;
+  const descendStart = flyingDuration * 0.8;
+  return Math.max(0, descendStart - elapsed);
 }

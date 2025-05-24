@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { setupScene, toggleLight, setCameraMode, getActiveCamera } from './sceneSetup.js';
 import { createRoad, updateRoad, toggleLights, getPostsLightsState } from './roadManager.js';
-import { createPlayer, setupPlayerControls, updatePlayer, getHeadlightsState, triggerCollisionAnimation, setBlockPlayerInput } from './playerManager.js';
+import { createPlayer, setupPlayerControls, updatePlayer, getHeadlightsState, triggerCollisionAnimation, setBlockPlayerInput, isVanFlying, getFlyingStartTime, getFlyingDuration, getPlayerPosition, isVanDescending, getFlyingTimeLeft } from './playerManager.js';
 import { loadObstacles, updateObstacles, getScrollSpeed } from './obstacleManager.js';
 import { loadTrees, updateTrees } from './treeManager.js';
 import { createAnimatedHorse, updateAnimatedHorse } from './animatedHorse.js';
@@ -34,6 +34,7 @@ let showHitboxes = false;
 let playerLives = 3;
 let isGameOver = false;
 let blockPlayerInput = false;
+let lastFlightTimeLeft = null;
 
 // Referência para o elemento da tela de carregamento
 const loadingScreen = document.getElementById('loadingScreen');
@@ -374,6 +375,7 @@ function updateUI() {
                 `FPS: ${Math.round(fps)}`;
         }
         updateHeartsUI();
+        updateFlightTimerUI();
         lastUIUpdate = currentTime;
     }
 }
@@ -489,3 +491,49 @@ export function setupPlayerControlsWithBlock() {
 }
 
 export { loseLife };
+
+function createFlightTimerUI() {
+  let flightTimer = document.getElementById('flightTimerUI');
+  if (!flightTimer) {
+    flightTimer = document.createElement('div');
+    flightTimer.id = 'flightTimerUI';
+    flightTimer.style.cssText = `
+      position: fixed;
+      top: 32px;
+      right: 48px;
+      z-index: 2000;
+      background: rgba(30, 30, 30, 0.85);
+      color: #ffe066;
+      font-family: Arial, sans-serif;
+      font-size: 2.2em;
+      font-weight: bold;
+      padding: 10px 32px;
+      border-radius: 16px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.25);
+      pointer-events: none;
+      user-select: none;
+      text-align: center;
+      display: none;
+    `;
+    document.body.appendChild(flightTimer);
+  }
+}
+
+createFlightTimerUI();
+
+function updateFlightTimerUI() {
+  const flightTimer = document.getElementById('flightTimerUI');
+  if (!flightTimer) return;
+  if (isVanFlying()) {
+    let timeLeft;
+    if (isVanDescending()) {
+      timeLeft = 0.0;
+    } else {
+      timeLeft = getFlyingTimeLeft();
+    }
+    flightTimer.textContent = `VOO: ${timeLeft.toFixed(1)}s`;
+    flightTimer.style.display = 'block';
+  } else {
+    flightTimer.style.display = 'none';
+  }
+}

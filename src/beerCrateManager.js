@@ -41,9 +41,13 @@ export function createBeerCrate() {
                 1.2, // Position on top of the crate
                 row * bottleSpacingZ - bottleOffsetZ
             );
+            bottle.scale.set(0.7, 0.7, 0.7); // Reduzir tamanho das garrafas
             beerCrateGroup.add(bottle);
         }
     }
+    
+    // Reduzir tamanho geral da caixa e grupo
+    beerCrateGroup.scale.set(0.55, 0.55, 0.55);
     
     return beerCrateGroup;
 }

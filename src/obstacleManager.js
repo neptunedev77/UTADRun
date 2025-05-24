@@ -176,10 +176,10 @@ function generateObstacles(scene) {
 
 function getRandomTemplate() {
   const weightedList = [
-    'cone', 'cone', 'cone',  // Cones com mais peso
-    'cavalo',                // Menos frequente
-    'tampa', 'tampa',        // Tampa de esgoto
-    'beerCrate',  // Grade de cerveja
+    'cone', 'cone', 'cone', 'cone', 'cone', // Mais cones
+    'cavalo', 'cavalo',                    // Mais cavalos
+    'tampa', 'tampa', 'tampa',             // Mais tampas
+    'beerCrate'                            // Powerup raro
   ];
 
   let chosenName;
@@ -232,6 +232,36 @@ export function updateObstacles(deltaTime = 0.016, scene) {
     if (!obstacle.visible || obstacle.scale.x === 0 || obstacle.scale.y === 0 || obstacle.scale.z === 0) return;
     obstacle.position.z += scrollSpeed;
     
+    // --- ANIMAÇÃO DE POWERUP PARA BEER CRATE ---
+    if (obstacle.userData.type === 'beerCrate') {
+      // Flutuação suave
+      const t = performance.now() / 1000 + obstacle.position.x * 0.5 + obstacle.position.z * 0.2;
+      obstacle.position.y = 0.6 + Math.sin(t * 2.2) * 0.18;
+      // Rotação lenta
+      obstacle.rotation.y += deltaTime * 0.8;
+      // Efeito de brilho amarelo animado
+      if (!obstacle._powerupGlow) {
+        const glow = new THREE.Mesh(
+          new THREE.SphereGeometry(2, 24, 24),
+          new THREE.MeshBasicMaterial({
+            color: 0xfff066,
+            transparent: true,
+            opacity: 0.35,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+          })
+        );
+        glow.position.y = 0.7;
+        glow.renderOrder = 999;
+        obstacle.add(glow);
+        obstacle._powerupGlow = glow;
+      }
+      if (obstacle._powerupGlow) {
+        obstacle._powerupGlow.material.opacity = 0.25 + 0.15 * Math.sin(t * 3.5);
+        obstacle._powerupGlow.scale.setScalar(1.1 + 0.15 * Math.sin(t * 2.7));
+      }
+    }
+    // ------------------------------------------
     // Verificar colisão com o jogador
     checkCollision(obstacle, playerPosition);
 
