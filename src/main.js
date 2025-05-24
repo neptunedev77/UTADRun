@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { setupScene, toggleLight, setCameraMode, getActiveCamera } from './sceneSetup.js';
 import { createRoad, updateRoad, toggleLights, getPostsLightsState } from './roadManager.js';
-import { createPlayer, setupPlayerControls, updatePlayer, getHeadlightsState } from './playerManager.js';
+import { createPlayer, setupPlayerControls, updatePlayer, getHeadlightsState, triggerCollisionAnimation, setBlockPlayerInput } from './playerManager.js';
 import { loadObstacles, updateObstacles, getScrollSpeed } from './obstacleManager.js';
 import { loadTrees, updateTrees } from './treeManager.js';
 import { createAnimatedHorse, updateAnimatedHorse } from './animatedHorse.js';
@@ -33,6 +33,7 @@ let isPaused = false;     // Variável para controlar o estado de pausa do jogo
 let showHitboxes = false;
 let playerLives = 3;
 let isGameOver = false;
+let blockPlayerInput = false;
 
 // Referência para o elemento da tela de carregamento
 const loadingScreen = document.getElementById('loadingScreen');
@@ -78,7 +79,7 @@ function init() {
   // Carregar recursos do jogo em segundo plano
   setTimeout(() => {
     // Configurar controles do jogador
-    setupPlayerControls();
+    setupPlayerControlsWithBlock();
     
     // Carregar elementos do jogo
     const road = createRoad();
@@ -308,7 +309,14 @@ function loseLife() {
   playerLives--;
   updateHeartsUI();
   if (playerLives <= 0) {
-    showGameOverScreen();
+    setBlockPlayerInput(true);
+    triggerCollisionAnimation(0.7); // animação de colisão longa na última vida
+    setTimeout(() => {
+      showGameOverScreen();
+      setBlockPlayerInput(false);
+    }, 400); // atraso reduzido
+  } else {
+    triggerCollisionAnimation(0.35); // animação de colisão curta nas outras colisões
   }
 }
 
@@ -469,5 +477,15 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.prepend(errorElement);
     }
 });
+
+export function setupPlayerControlsWithBlock() {
+  window.addEventListener('keydown', (event) => {
+    if (blockPlayerInput) {
+      event.preventDefault();
+      return;
+    }
+  }, true);
+  setupPlayerControls();
+}
 
 export { loseLife };

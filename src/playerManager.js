@@ -185,6 +185,39 @@ function emitParticles(position, count = 10) {
   }
 }
 
+function emitRedParticles(position, count = 10) {
+  if (!particleSystem) return;
+  const positions = particleSystem.geometry.attributes.position.array;
+  const colors = particleSystem.geometry.attributes.color.array;
+  let emitted = 0;
+  for (let i = 0; i < particles.length && emitted < count; i++) {
+    if (!particles[i].active) {
+      const idx = i * 3;
+      // Define posição inicial
+      positions[idx] = position.x + (Math.random() - 0.5) * 0.5;
+      positions[idx + 1] = position.y + (Math.random() - 0.5) * 0.5;
+      positions[idx + 2] = position.z + (Math.random() - 0.5) * 0.5;
+      // Reinicia partícula
+      particles[i].active = true;
+      particles[i].life = particles[i].maxLife * 0.7; // vida mais curta
+      particles[i].speed = 0.09 + Math.random() * 0.13;
+      // Direção aleatória
+      particles[i].direction.set(
+        (Math.random() - 0.5) * 2,
+        Math.random() * 0.7 + 0.7, // Mais para cima
+        (Math.random() - 0.5) * 2
+      ).normalize();
+      // Força cor vermelha
+      colors[idx] = 1.0; // R
+      colors[idx + 1] = 0.1 + Math.random() * 0.1; // G
+      colors[idx + 2] = 0.1 + Math.random() * 0.1; // B
+      emitted++;
+    }
+  }
+  particleSystem.geometry.attributes.position.needsUpdate = true;
+  particleSystem.geometry.attributes.color.needsUpdate = true;
+}
+
 export function createPlayer(scene) {
   // Cria o sistema de partículas
   createParticleSystem(scene);
@@ -227,17 +260,20 @@ export function createPlayer(scene) {
   });
 }
 
+// Receber o bloqueio de input do main.js
+export let blockPlayerInput = false;
+export function setBlockPlayerInput(val) { blockPlayerInput = val; }
+
 export function setupPlayerControls() {
   window.addEventListener('keydown', (event) => {
+    if (blockPlayerInput) return;
     if (!van) return;
-
     if (event.key === 'a' || event.key === 'ArrowLeft') {
       if (currentLaneIndex > 0) {
         currentLaneIndex--;
         updateLanePosition();
       }
     }
-
     if (event.key === 'd' || event.key === 'ArrowRight') {
       if (currentLaneIndex < lanePositions.length - 1) {
         currentLaneIndex++;
@@ -305,6 +341,42 @@ function updateLanePosition() {
   }
 }
 
+let collisionAnimationActive = false;
+let collisionAnimationStart = 0;
+let collisionAnimationDuration = 0.7;
+let originalVanColor = null;
+let originalVanScale = null;
+let originalVanRotationZ = 0;
+let collisionImpactDirection = 1;
+
+export function triggerCollisionAnimation(duration = 0.7) {
+  if (!van) return;
+  collisionAnimationActive = true;
+  collisionAnimationStart = performance.now() / 1000;
+  collisionAnimationDuration = duration;
+  // Guarda cor, escala e rotação originais
+  van.traverse(child => {
+    if (child.isMesh && child.material) {
+      if (!originalVanColor) originalVanColor = child.material.color.clone();
+      child.material.color.set('#ff3333');
+    }
+  });
+  if (!originalVanScale) originalVanScale = van.scale.clone();
+  originalVanRotationZ = van.rotation.z;
+  collisionImpactDirection = Math.random() > 0.5 ? 1 : -1;
+  setTimeout(() => {
+    collisionAnimationActive = false;
+    // Restaura cor, escala e rotação
+    van.traverse(child => {
+      if (child.isMesh && child.material && originalVanColor) {
+        child.material.color.copy(originalVanColor);
+      }
+    });
+    if (originalVanScale) van.scale.copy(originalVanScale);
+    van.rotation.z = originalVanRotationZ;
+  }, duration * 1000);
+}
+
 export function updatePlayer(deltaTime = 0.016) {
   if (!van) return;
   
@@ -366,6 +438,30 @@ export function updatePlayer(deltaTime = 0.016) {
       const jumpY = Math.sin(Math.PI * t) * jumpHeight;
       van.position.y = 1 + jumpY;
     }
+  }
+
+  // Animação de colisão: squash & stretch, tremor, rotação, cor vermelha
+  if (collisionAnimationActive) {
+    const t = (performance.now() / 1000 - collisionAnimationStart);
+    const progress = Math.min(t / collisionAnimationDuration, 1);
+    // Squash & stretch: squash no início, stretch no fim
+    let squashY = 1 - 0.32 * Math.sin(Math.PI * progress); // squash forte
+    let squashX = 1 + 0.18 * Math.sin(Math.PI * progress); // stretch lateral
+    if (originalVanScale) {
+      van.scale.y = originalVanScale.y * squashY;
+      van.scale.x = originalVanScale.x * squashX;
+    }
+    // Tremor lateral aditivo
+    const shake = Math.sin(t * 38) * 0.18 * (1 - progress) * collisionImpactDirection;
+    van.position.x += shake;
+    // Rotação Z (pequena)
+    van.rotation.z = originalVanRotationZ + Math.sin(progress * Math.PI) * 0.22 * collisionImpactDirection;
+    // Cor vermelha
+    van.traverse(child => {
+      if (child.isMesh && child.material && originalVanColor) {
+        child.material.color.set('#ff3333');
+      }
+    });
   }
 }
 
