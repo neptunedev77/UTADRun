@@ -43,7 +43,7 @@ function createWelcomeSign(distance) {
     const zOffset = -signDistance;
     
     // Posiciona o sinal
-    welcomeSign.scale.set(1.5, 1.5, 1.5);
+    welcomeSign.scale.set(0.01, 0.01, 0.01); // Começa pequeno para animar
     welcomeSign.position.set(xPos, 2, zOffset - 15); // Posiciona mais longe para ser visível mais cedo
     
     // Sempre olha para a esquerda já que estamos na lateral direita
@@ -65,7 +65,9 @@ function createWelcomeSign(distance) {
         distanceValue: distance,
         textMesh: textMesh,
         shouldPassAt: distance,
-        isWelcomeSign: true
+        isWelcomeSign: true,
+        animatingIn: true,
+        animationTime: 0
     });
 }
 
@@ -181,7 +183,7 @@ function createNewSignAtDistance(distance) {
     const zOffset = -signDistance;
     
     // Posiciona o sinal
-    newSign.scale.set(1.5, 1.5, 1.5);
+    newSign.scale.set(0.01, 0.01, 0.01); // Começa pequeno para animar
     newSign.position.set(xPos, 2, zOffset);
     
     // Sempre olha para a esquerda já que estamos na lateral direita
@@ -202,7 +204,9 @@ function createNewSignAtDistance(distance) {
         mesh: newSign,
         distanceValue: distance,
         textMesh: distanceTextMesh,
-        shouldPassAt: distance // Guarda quando este sinal deve passar pelo jogador
+        shouldPassAt: distance, // Guarda quando este sinal deve passar pelo jogador
+        animatingIn: true,
+        animationTime: 0
     });
     
     // Atualiza a última distância do sinal
@@ -284,10 +288,30 @@ export function updateDistanceSign() {
         // Move o sinal para o jogador
         sign.mesh.position.z += getScrollSpeed();
         
+        // Animação de entrada (escala)
+        if (sign.animatingIn) {
+            sign.animationTime += 0.08; // velocidade da animação
+            const t = Math.min(1, sign.animationTime);
+            // Ease out back para efeito "pop"
+            const scale = 0.01 + (1.5 - 0.01) * easeOutBack(t);
+            sign.mesh.scale.set(scale, scale, scale);
+            if (t >= 1) {
+                sign.mesh.scale.set(1.5, 1.5, 1.5);
+                sign.animatingIn = false;
+            }
+        }
+        
         // Remove sinais que passaram pelo jogador
         if (sign.mesh.position.z > 10) {
             scene.remove(sign.mesh);
             distanceSigns.splice(i, 1);
         }
     }
+}
+
+// Função de easing para animação pop
+function easeOutBack(t) {
+    const c1 = 1.70158;
+    const c3 = c1 + 1;
+    return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
 }

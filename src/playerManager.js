@@ -240,7 +240,7 @@ export function setupPlayerControls() {
     }
     
     // Tecla W, espaço ou seta para cima para tocar a animação 1
-    if (event.key === 'w' || event.key === ' ' || event.key === 'ArrowUp') {
+    if ((event.key === 'w' || event.key === ' ' || event.key === 'ArrowUp') && !isVanFlying()) {
       playVanAnimation(1); // Indice 0 para a animação 1
     }
   });
