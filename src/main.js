@@ -29,6 +29,7 @@ let frameCount = 0;
 let lastFpsUpdate = 0;
 let isGameActive = false; // Inicia como falso até o jogador pressionar uma tecla
 let isPaused = false;     // Variável para controlar o estado de pausa do jogo
+let showHitboxes = false;
 
 // Referência para o elemento da tela de carregamento
 const loadingScreen = document.getElementById('loadingScreen');
@@ -114,6 +115,13 @@ function init() {
       toggleLights(!getPostsLightsState());
       updateLightingHint();
     }
+
+    if (event.key.toLowerCase() === 'h') {
+      showHitboxes = !showHitboxes;
+      if (!showHitboxes && window.clearHitboxes && scene) {
+        window.clearHitboxes(scene);
+      }
+    }
   });
 
     window.addEventListener('headlightsToggled', () => {
@@ -136,7 +144,7 @@ function updateLightingHint() {
     const headlights = getHeadlightsState() ? "ON" : "OFF";
     
     hintElement.textContent = 
-      `${cameraText} | [P] Pausar | Luzes: [1] Ambiente: ${ambient}` +
+      `${cameraText} | [P] Pausar | [H] Hitboxes | Luzes: [1] Ambiente: ${ambient}` +
       ` | [2] Direcional: ${directional}` +
       ` | [3] Postes: ${streetLights}` +
       ` | [4] Faróis: ${headlights}`;
@@ -284,6 +292,7 @@ function animate(currentTime) {
     // Renderiza a cena
     if (scene && camera) {
       renderer.render(scene, getActiveCamera());
+      drawHitboxes();
     }
   }
   
@@ -305,6 +314,13 @@ function updateFpsCounter(currentTime) {
         frameCount = 0;
         lastFpsUpdate = currentTime;
     }
+}
+
+function drawHitboxes() {
+  if (!showHitboxes || !scene) return;
+  // Funções utilitárias para desenhar hitboxes
+  if (window.drawVanHitbox) window.drawVanHitbox(scene);
+  if (window.drawObstaclesHitboxes) window.drawObstaclesHitboxes(scene);
 }
 
 // Inicializa o jogo quando o documento estiver pronto

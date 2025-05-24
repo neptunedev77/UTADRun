@@ -182,7 +182,7 @@ function getRandomTemplate() {
   const weightedList = [
     'cone', 'cone', 'cone', // 🎯 cones com mais peso
     'cavalo',               // 🐴 menos frequente
-    'buraco', 'buraco',     // buracos com chance média
+    'buraco',               // buracos com chance média
     'tampa',                // tampa de esgoto
     'beerCrate', 'beerCrate' // grade de cerveja
   ];
@@ -315,3 +315,26 @@ function checkCollision(obstacle, playerPosition) {
     }
   }
 }
+
+let obstacleHitboxHelpers = [];
+
+window.drawObstaclesHitboxes = function(scene) {
+  // Remove helpers antigos
+  obstacleHitboxHelpers.forEach(helper => scene.remove(helper));
+  obstacleHitboxHelpers = [];
+  obstacles.forEach(obstacle => {
+    if (!obstacle) return;
+    const helper = new THREE.BoxHelper(obstacle, 0xff0000);
+    scene.add(helper);
+    obstacleHitboxHelpers.push(helper);
+  });
+};
+
+window.clearHitboxes = window.clearHitboxes || function(scene) {};
+window.clearHitboxes = (function(oldClear) {
+  return function(scene) {
+    obstacleHitboxHelpers.forEach(helper => scene.remove(helper));
+    obstacleHitboxHelpers = [];
+    if (typeof oldClear === 'function') oldClear(scene);
+  };
+})(window.clearHitboxes);

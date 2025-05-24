@@ -731,3 +731,26 @@ function easeInOutBack(t) {
     ? (Math.pow(2 * t, 2) * ((c2 + 1) * 2 * t - c2)) / 2
     : (Math.pow(2 * t - 2, 2) * ((c2 + 1) * (t * 2 - 2) + c2) + 2) / 2;
 }
+
+let vanHitboxHelper = null;
+
+window.drawVanHitbox = function(scene) {
+  if (!van) return;
+  if (vanHitboxHelper) {
+    scene.remove(vanHitboxHelper);
+    vanHitboxHelper = null;
+  }
+  vanHitboxHelper = new THREE.BoxHelper(van, 0x00ff00);
+  scene.add(vanHitboxHelper);
+};
+
+window.clearHitboxes = window.clearHitboxes || function(scene) {};
+window.clearHitboxes = (function(oldClear) {
+  return function(scene) {
+    if (vanHitboxHelper) {
+      scene.remove(vanHitboxHelper);
+      vanHitboxHelper = null;
+    }
+    if (typeof oldClear === 'function') oldClear(scene);
+  };
+})(window.clearHitboxes);
