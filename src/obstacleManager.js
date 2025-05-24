@@ -16,6 +16,7 @@ const modelList = [
   { name: 'cone', generator: createConeDeTransito },
   { name: 'cavalo', file: './assets/models/obstaculos/cavalo.fbx', scale: 0.02 },
   { name: 'buraco', generator: createBuraco },
+  { name: 'tampa', file: './assets/models/obstaculos/tampa.fbx', scale: 0.0015 },
   { name: 'beerCrate', generator: () => null } // Will be added in loadObstacles
 ];
 
@@ -99,14 +100,20 @@ export function loadObstacles(scene) {
     } else {
       loader.load(file, (fbx) => {
         fbx.scale.set(scale, scale, scale);
-      
-        const tex = texture ? textureLoader.load(texture) : null;
-      
+
+        // Aplica a textura tampa.png apenas à tampa
+        let tex = null;
+        if (name === 'tampa') {
+          tex = textureLoader.load('/assets/textures/tampa.png');
+        } else if (texture && name !== 'tampa') {
+          tex = textureLoader.load(texture);
+        }
+
         fbx.traverse((child) => {
           if (child.isMesh) {
             child.castShadow = false;
             child.receiveShadow = false;
-      
+
             if (tex) {
               child.material = new THREE.MeshStandardMaterial({
                 map: tex,
@@ -116,7 +123,7 @@ export function loadObstacles(scene) {
             }
           }
         });
-      
+
         fbx.userData = { type: name };
         obstacleTemplates[name] = fbx;
         checkAllLoaded();
@@ -151,8 +158,8 @@ function generateObstacles(scene) {
     
 
     let y = 0.051;
-    if (clone.geometry?.type === 'CircleGeometry') {
-      y = 0.07;
+    if (clone.geometry?.type === 'CircleGeometry' || name.includes('tampa')) {
+      y = name.includes('tampa') ? 0.09 : 0.07;
     } else if (name.includes('cone')) {
       y = 0.25;
     } else if (name.includes('cavalo')) {
@@ -176,6 +183,7 @@ function getRandomTemplate() {
     'cone', 'cone', 'cone', // 🎯 cones com mais peso
     'cavalo',               // 🐴 menos frequente
     'buraco', 'buraco',     // buracos com chance média
+    'tampa',                // tampa de esgoto
     'beerCrate', 'beerCrate' // grade de cerveja
   ];
 
@@ -185,12 +193,13 @@ function getRandomTemplate() {
   do {
     const randIndex = Math.floor(Math.random() * weightedList.length);
     chosenName = weightedList[randIndex];
-    attempts++;
+    // Garante que tampa não aparece ao lado de buraco
+    if (lastObstacleType === 'buraco' && chosenName === 'tampa') continue;
+    if (lastObstacleType === 'tampa' && chosenName === 'buraco') continue;
   } while (
     obstacleTemplates[chosenName]?.userData?.type === lastObstacleType &&
-    attempts < 10
+    attempts++ < 10
   );
-  
 
   return obstacleTemplates[chosenName];
 }
@@ -249,8 +258,8 @@ export function updateObstacles(deltaTime = 0.016) {
       
 
       let y = 0.051;
-      if (newClone.geometry?.type === 'CircleGeometry') {
-        y = 0.07;
+      if (newClone.geometry?.type === 'CircleGeometry' || name.includes('tampa')) {
+        y = name.includes('tampa') ? 0.09 : 0.07;
       } else if (name.includes('cone')) {
         y = 0.25;
       } else if (name.includes('cavalo')) {
