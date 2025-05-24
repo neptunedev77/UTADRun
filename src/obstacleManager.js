@@ -237,6 +237,8 @@ export function updateObstacles(deltaTime = 0.016) {
   const playerPosition = getPlayerPosition();
   
   obstacles.forEach((obstacle) => {
+    // Ignorar obstáculos invisíveis ou com escala zero
+    if (!obstacle.visible || obstacle.scale.x === 0 || obstacle.scale.y === 0 || obstacle.scale.z === 0) return;
     obstacle.position.z += scrollSpeed;
     
     // Verificar colisão com o jogador
@@ -254,9 +256,7 @@ export function updateObstacles(deltaTime = 0.016) {
 
       const newClone = newTemplate.clone();
       const name = newClone.name?.toLowerCase() || 'obstaculo';
-      
       lastObstacleType = newTemplate.userData?.type || name;
-      
 
       let y = 0.051;
       if (newClone.geometry?.type === 'CircleGeometry' || name.includes('tampa')) {
@@ -303,21 +303,24 @@ function checkCollision(obstacle, playerPosition) {
   if (distanceX < collisionThresholdX && 
       distanceY < collisionThresholdY && 
       distanceZ < collisionThresholdZ) {
+    // Debug: logar tipo do obstáculo
+    console.log('Colisão! Tipo:', obstacle.userData.type, 'van.y:', playerPosition.y, 'obstáculo.y:', obstacle.position.y, 'diferença:', Math.abs(obstacle.position.y - playerPosition.y));
     if (obstacle.userData.type === 'beerCrate') {
       // Só a beer crate faz voar
-      console.log('Colisão com grade de cerveja! Iniciando voo...');
       startFlying();
       // Reposiciona a grade de cerveja para longe (como se tivesse sido destruída)
       const farthestZ = Math.min(...obstacles.map(o => o.position.z));
       obstacle.position.z = farthestZ - spacing - Math.random() * variation;
       obstacle.position.x = getRandomLaneX();
+      obstacle.userData.type = 'beerCrate'; // reforça tipo
     } else {
-      // Perde uma vida ao colidir com qualquer outro obstáculo, mas NÃO voa
       loseLife();
       // Reposiciona obstáculo para evitar múltiplas perdas instantâneas
       const farthestZ = Math.min(...obstacles.map(o => o.position.z));
       obstacle.position.z = farthestZ - spacing - Math.random() * variation;
       obstacle.position.x = getRandomLaneX();
+      // reforça tipo correto
+      obstacle.userData.type = obstacle.userData.type;
     }
   }
 }
