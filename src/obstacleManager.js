@@ -303,20 +303,18 @@ function checkCollision(obstacle, playerPosition) {
   if (distanceX < collisionThresholdX && 
       distanceY < collisionThresholdY && 
       distanceZ < collisionThresholdZ) {
-    
-    // Se colidir com uma grade de cerveja, faz a van voar
     if (obstacle.userData.type === 'beerCrate') {
+      // Só a beer crate faz voar
       console.log('Colisão com grade de cerveja! Iniciando voo...');
       startFlying();
-      
       // Reposiciona a grade de cerveja para longe (como se tivesse sido destruída)
       const farthestZ = Math.min(...obstacles.map(o => o.position.z));
       obstacle.position.z = farthestZ - spacing - Math.random() * variation;
       obstacle.position.x = getRandomLaneX();
     } else {
-      // Perde uma vida ao colidir com qualquer outro obstáculo
+      // Perde uma vida ao colidir com qualquer outro obstáculo, mas NÃO voa
       loseLife();
-      // Opcional: reposicionar obstáculo para evitar múltiplas perdas instantâneas
+      // Reposiciona obstáculo para evitar múltiplas perdas instantâneas
       const farthestZ = Math.min(...obstacles.map(o => o.position.z));
       obstacle.position.z = farthestZ - spacing - Math.random() * variation;
       obstacle.position.x = getRandomLaneX();
