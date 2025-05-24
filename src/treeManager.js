@@ -75,6 +75,17 @@ function addTree(scene, x, z) {
         const templateIndex = Math.floor(Math.random() * treeTemplates.length);
         const treeTemplate = treeTemplates[templateIndex];
         tree = treeTemplate.clone();
+        
+        // Garantir que a árvore clonada tenha sombras habilitadas
+        tree.castShadow = true;
+        tree.receiveShadow = true;
+        tree.traverse((child) => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        });
+        
         scene.add(tree);
     } else {
         // Todas as árvores estão em uso
@@ -184,15 +195,21 @@ export function loadTrees(scene) {
     const treeTexture = textureLoader.load('./assets/textures/arvores.png');
 
     loader.load('./assets/models/tree.fbx', (fbx) => {
+        // Configurar o grupo principal para projetar sombras
+        fbx.castShadow = true;
+        fbx.receiveShadow = true;
+        
         fbx.traverse((child) => {
             if (child.isMesh) {
-                const isMainTrunk = child.name && (child.name.includes('trunk') || child.name.includes('branch'));
-                child.castShadow = isMainTrunk;
+                // Garantir que TODOS os meshes projetem sombras
+                child.castShadow = true;
                 child.receiveShadow = true;
             
                 if (child.material) {
                     child.material = new THREE.MeshStandardMaterial({
-                        map: treeTexture
+                        map: treeTexture,
+                        roughness: 0.8,
+                        metalness: 0.2
                     });
                     child.material.needsUpdate = true;
                 }
@@ -202,15 +219,21 @@ export function loadTrees(scene) {
         treeTemplates.push(fbx);
         
         loader.load('./assets/models/tree2.fbx', (fbx2) => {
+            // Configurar o grupo principal para projetar sombras
+            fbx2.castShadow = true;
+            fbx2.receiveShadow = true;
+            
             fbx2.traverse((child) => {
                 if (child.isMesh) {
-                    const isMainTrunk = child.name && (child.name.includes('trunk') || child.name.includes('branch'));
-                    child.castShadow = isMainTrunk;
+                    // Garantir que TODOS os meshes projetem sombras
+                    child.castShadow = true;
                     child.receiveShadow = true;
                     
                     if (child.material) {
                         child.material = new THREE.MeshStandardMaterial({
-                            map: treeTexture
+                            map: treeTexture,
+                            roughness: 0.8,
+                            metalness: 0.2
                         });
                         child.material.needsUpdate = true;
                     }

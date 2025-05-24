@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { setupScene, toggleLight, setCameraMode, getActiveCamera } from './sceneSetup.js';
+import { updateClouds } from './sceneSetup.js';
 import { createRoad, updateRoad, toggleLights, getPostsLightsState } from './roadManager.js';
 import { createPlayer, setupPlayerControls, updatePlayer, getHeadlightsState, triggerCollisionAnimation, setBlockPlayerInput, isVanFlying, getFlyingStartTime, getFlyingDuration, getPlayerPosition, isVanDescending, getFlyingTimeLeft } from './playerManager.js';
 import { loadObstacles, updateObstacles, getScrollSpeed } from './obstacleManager.js';
@@ -445,6 +446,9 @@ function animate(currentTime) {
     
     // Atualiza a física do jogo
     updateGame(deltaTime);
+    
+    // Atualiza as nuvens
+    updateClouds(deltaTime);
     
     // Renderiza a cena
     if (scene && camera) {

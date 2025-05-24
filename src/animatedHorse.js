@@ -284,6 +284,14 @@ function createAnimatedHorse(scene) {
                     });
                 }
                 
+                // Configurar sombras
+                horse.traverse((child) => {
+                    if (child.material) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+                
                 // Gerar cavalos iniciais na cena
                 generateHorses(scene, horse);
                 

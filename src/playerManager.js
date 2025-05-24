@@ -23,7 +23,7 @@ const lanePositions = [-2.5, 0, 2.5];
 // Variáveis para controle de voo
 let isFlying = false;
 let flyingStartTime = 0;
-let flyingDuration = 8; // duração total do voo em segundos
+let flyingDuration = 5; // duração total do voo em segundos (exatamente 5 segundos conforme solicitado)
 let flyingHeight = 0;
 let flyingTargetHeight = 4; // altura máxima reduzida para voo mais baixo
 let flyingSpeed = 0;
@@ -227,13 +227,12 @@ export function createPlayer(scene) {
   loader.load('/assets/models/van/van.fbx', (fbx) => {
     van = fbx;
     van.scale.set(0.8, 0.8, 0.8);
-    van.position.set(lanePositions[currentLaneIndex], 1, 4);
+    van.position.set(lanePositions[currentLaneIndex], 0.5, 4); // Ajustado para 0.5 para ficar sobre o chão
     van.rotation.y = Math.PI;
 
     van.traverse((child) => {
       if (child.isMesh) {
-        // Only enable shadows for the main body of the van
-        child.castShadow = child.name.includes('body') || child.name.includes('chassis');
+        child.castShadow = true; // Habilita sombras para todos os filhos
         child.receiveShadow = true;
         child.material = new THREE.MeshStandardMaterial({
           map: texture,
@@ -269,13 +268,49 @@ export function setupPlayerControls() {
     if (blockPlayerInput) return;
     if (!van) return;
     if (event.key === 'a' || event.key === 'ArrowLeft') {
-      if (currentLaneIndex > 0) {
+      if (isFlying) {
+        // Quando estiver voando, mudar de faixa E tocar a animação e virar para a esquerda
+        if (currentLaneIndex > 0) {
+          currentLaneIndex--;
+          // Não chamamos updateLanePosition() para não interferir com a rotação personalizada
+          targetX = lanePositions[currentLaneIndex];
+        }
+        
+        playVanAnimation(0); // Animação para a esquerda
+        
+        // Aplicar rotação para a esquerda durante o voo
+        if (van) {
+          // Rotação no eixo Y (virar para a esquerda)
+          van.rotation.y = Math.PI + 0.5; // Virar para a esquerda
+          // Inclinação lateral (rotação no eixo Z)
+          van.rotation.z = 0.3; // Inclinar para a esquerda
+        }
+      } else if (currentLaneIndex > 0) {
+        // Movimento normal quando não está voando
         currentLaneIndex--;
         updateLanePosition();
       }
     }
     if (event.key === 'd' || event.key === 'ArrowRight') {
-      if (currentLaneIndex < lanePositions.length - 1) {
+      if (isFlying) {
+        // Quando estiver voando, mudar de faixa E tocar a animação
+        if (currentLaneIndex < lanePositions.length - 1) {
+          currentLaneIndex++;
+          // Não chamamos updateLanePosition() para não interferir com a rotação personalizada
+          targetX = lanePositions[currentLaneIndex];
+        }
+        
+        playVanAnimation(2); // Animação para a direita
+        
+        // Aplicar rotação para a direita durante o voo
+        if (van) {
+          // Rotação no eixo Y (virar para a direita)
+          van.rotation.y = Math.PI - 0.5; // Virar para a direita
+          // Inclinação lateral (rotação no eixo Z)
+          van.rotation.z = -0.3; // Inclinar para a direita
+        }
+      } else if (currentLaneIndex < lanePositions.length - 1) {
+        // Movimento normal quando não está voando
         currentLaneIndex++;
         updateLanePosition();
       }
@@ -432,12 +467,15 @@ export function updatePlayer(deltaTime = 0.016) {
     const t = (now - jumpStartTime) / jumpDuration;
     if (t >= 1) {
       isJumping = false;
-      van.position.y = 1;
+      van.position.y = 0.5; // Ajustado para 0.5 para ficar sobre o chão
     } else {
       // Movimento parabólico (ease)
       const jumpY = Math.sin(Math.PI * t) * jumpHeight;
-      van.position.y = 1 + jumpY;
+      van.position.y = 0.5 + jumpY; // Base ajustada para 0.5
     }
+  } else if (!isFlying && van.position.y !== 0.5) {
+    // Garantir que a van esteja no chão quando não estiver pulando ou voando
+    van.position.y = 0.5;
   }
 
   // Animação de colisão: squash & stretch, tremor, rotação, cor vermelha
@@ -517,6 +555,17 @@ function updateFlyingState(deltaTime) {
   
   if (!isFlying) return;
   
+  // Gradualmente retornar a van para a rotação normal quando não estiver virando
+  // Isso faz com que a van volte suavemente para a posição normal após virar
+  if (van) {
+    // Suaviza o retorno à rotação normal no eixo Y
+    const targetYRotation = Math.PI; // Rotação padrão (virado para trás na tela)
+    van.rotation.y += (targetYRotation - van.rotation.y) * 0.05;
+    
+    // Suaviza o retorno à rotação normal no eixo Z
+    van.rotation.z *= 0.95; // Reduz gradualmente a inclinação lateral
+  }
+  
   const currentTime = performance.now() / 1000;
   const elapsedTime = currentTime - flyingStartTime;
   const progress = Math.min(elapsedTime / flyingDuration, 1);
@@ -552,12 +601,9 @@ function updateFlyingState(deltaTime) {
     // Inclinação fixa para frente durante o voo
     const targetPitch = 0.2; // Ângulo fixo de inclinação para frente
     
-    // Aplica as rotações com inclinação fixa
-    van.rotation.set(
-      targetPitch,  // Inclinação para frente fixa
-      van.rotation.y,  // Mantém a rotação Y original
-      0                // Sem inclinação lateral
-    );
+    // Não reseta a rotação Y e Z para permitir virar durante o voo
+    // Apenas atualiza a inclinação para frente (eixo X)
+    van.rotation.x = targetPitch;
     
     // Reseta as variáveis de inclinação dinâmica
     flyingTilt = 0;
@@ -575,11 +621,12 @@ function updateFlyingState(deltaTime) {
     van.position.x += (lanePositions[currentLaneIndex] - van.position.x) * 0.1;
   }
   
-  // Fase do voo: 0-0.2 = subida, 0.2-0.8 = pairar, 0.8-1.0 = descida
+  // Fase do voo: 0-0.2 = subida, 0.2-0.7 = pairar, 0.7-1.0 = descida
+  // Ajustado para dar mais tempo de descida com o voo mais curto
   let phase = 'climb';
-  if (progress >= 0.2 && progress < 0.8) {
+  if (progress >= 0.2 && progress < 0.7) {
     phase = 'hover';
-  } else if (progress >= 0.8) {
+  } else if (progress >= 0.7) {
     phase = 'descend';
   }
   currentFlightPhase = phase;

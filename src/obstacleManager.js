@@ -43,6 +43,10 @@ function createBuraco() {
 // Função para criar o cone de trânsito
 function createConeDeTransito() {
   const coneDeTransito = new THREE.Group();
+  
+  // Configurar o grupo para projetar e receber sombras
+  coneDeTransito.castShadow = true;
+  coneDeTransito.receiveShadow = true;
 
   // Textura do cone
   const texture = textureLoader.load('/assets/textures/cone_stripes.png');
@@ -61,7 +65,9 @@ function createConeDeTransito() {
   // Mesh do cone
   const cone = new THREE.Mesh(coneGeometry, coneMaterial);
 
-  cone.position.y = 1.5;
+  cone.position.y = 1.0; // Ajustado para 1.0 para ficar no chão
+  cone.castShadow = true;
+  cone.receiveShadow = true;
   coneDeTransito.add(cone);
 
   // Base do cone
@@ -82,9 +88,19 @@ function createConeDeTransito() {
   // Mesh da base
   const base = new THREE.Mesh(baseGeometry, baseMaterial);
   // Posiciona a base no chão
-  base.position.y = 0.5;
+  base.position.y = 0.1; // Ajustado para 0.1 para ficar no chão
+  base.castShadow = true;
+  base.receiveShadow = true;
   coneDeTransito.add(base);
 
+  // Garantir que o grupo e todos os seus filhos projetem sombras
+  coneDeTransito.traverse((child) => {
+    if (child.isMesh) {
+      child.castShadow = true;
+      child.receiveShadow = true;
+    }
+  });
+  
   coneDeTransito.userData = { type: 'cone' };
   return coneDeTransito;
 }
@@ -111,8 +127,9 @@ export function loadObstacles(scene) {
 
         fbx.traverse((child) => {
           if (child.isMesh) {
-            child.castShadow = false;
-            child.receiveShadow = false;
+            // Enable shadows for all obstacles
+            child.castShadow = true;
+            child.receiveShadow = true;
 
             if (tex) {
               child.material = new THREE.MeshStandardMaterial({

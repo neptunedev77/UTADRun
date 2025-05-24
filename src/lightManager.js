@@ -13,11 +13,11 @@ let leftRearIndicatorLight;
 let rightRearIndicatorLight;
 let leftHeadlight, rightHeadlight;
 
-// Posições dos faróis
-const FRONT_LEFT_POSITION = new THREE.Vector3(-0.8, 0.7, 2.3);
-const FRONT_RIGHT_POSITION = new THREE.Vector3(0.8, 0.7, 2.3);
-const REAR_LEFT_POSITION = new THREE.Vector3(-0.8, 0.7, -2.3);
-const REAR_RIGHT_POSITION = new THREE.Vector3(0.8, 0.7, -2.3);
+// Posições dos faróis (ajustadas para a nova altura da van Y=0.5)
+const FRONT_LEFT_POSITION = new THREE.Vector3(-0.8, 1.0, 2.3);
+const FRONT_RIGHT_POSITION = new THREE.Vector3(0.8, 1.0, 2.3);
+const REAR_LEFT_POSITION = new THREE.Vector3(-0.8, 1.0, -2.3);
+const REAR_RIGHT_POSITION = new THREE.Vector3(0.8, 1.0, -2.3);
 
 // Referência ao van
 let van;
@@ -31,87 +31,80 @@ export function setupLights(vanObject) {
   
   if (!van) return;
   
-  // Criar luzes indicadoras frontais (amarelas) - LADO ESQUERDO
-  leftFrontIndicatorLight = new THREE.SpotLight(0xffcc00, 15, 20, Math.PI / 5, 0.6, 1);
-  leftFrontIndicatorLight.position.set(-0.35, 0.85, 0.0); // posição ajustada para eliminar espaçamento
-  leftFrontIndicatorLight.target.position.set(-1.5, 0, 5); // alvo ajustado
-  leftFrontIndicatorLight.visible = false;
-  van.add(leftFrontIndicatorLight);
-  van.add(leftFrontIndicatorLight.target);
-  
-  // Criar luzes indicadoras traseiras - LADO ESQUERDO
-  leftRearIndicatorLight = new THREE.SpotLight(0xffcc00, 15, 20, Math.PI / 5, 0.6, 1);
-  leftRearIndicatorLight.position.set(-0.35, 0.85, 0.0); // posição ajustada para eliminar espaçamento
-  leftRearIndicatorLight.target.position.set(-1.5, 0, -5); // alvo ajustado
-  leftRearIndicatorLight.visible = false;
-  van.add(leftRearIndicatorLight);
-  van.add(leftRearIndicatorLight.target);
-  
-  // Criar luzes indicadoras frontais (amarelas) - LADO DIREITO
-  rightFrontIndicatorLight = new THREE.SpotLight(0xffcc00, 15, 20, Math.PI / 5, 0.6, 1);
-  rightFrontIndicatorLight.position.set(0.35, 0.85, 0.0); // posição ajustada para eliminar espaçamento
-  rightFrontIndicatorLight.target.position.set(1.5, 0, 5); // alvo ajustado
-  rightFrontIndicatorLight.visible = false;
-  van.add(rightFrontIndicatorLight);
-  van.add(rightFrontIndicatorLight.target);
-  
-  // Criar luzes indicadoras traseiras - LADO DIREITO
-  rightRearIndicatorLight = new THREE.SpotLight(0xffcc00, 15, 20, Math.PI / 5, 0.6, 1);
-  rightRearIndicatorLight.position.set(0.35, 0.85, 0.0); // posição ajustada para eliminar espaçamento
-  rightRearIndicatorLight.target.position.set(1.5, 0, -5); // alvo ajustado
-  rightRearIndicatorLight.visible = false;
-  van.add(rightRearIndicatorLight);
-  van.add(rightRearIndicatorLight.target);
+  // Inicializar variáveis para referência (sem criar as luzes grandes)
+  leftFrontIndicatorLight = null;
+  leftRearIndicatorLight = null;
+  rightFrontIndicatorLight = null;
+  rightRearIndicatorLight = null;
   
   // Adicionar pequenas luzes pontuais para dar efeito de brilho nos indicadores - LADO ESQUERDO
   window.leftFrontIndicatorGlow = new THREE.PointLight(0xffcc00, 3, 1.5);
-  window.leftFrontIndicatorGlow.position.set(-0.35, 0.85, 0.0);
+  window.leftFrontIndicatorGlow.position.set(-0.8, 0.75, 2.3); // posição ajustada para a frente da van
   window.leftFrontIndicatorGlow.visible = false;
   van.add(window.leftFrontIndicatorGlow);
   
   window.leftRearIndicatorGlow = new THREE.PointLight(0xffcc00, 3, 1.5);
-  window.leftRearIndicatorGlow.position.set(-0.35, 0.85, 0.0);
+  window.leftRearIndicatorGlow.position.set(-0.8, 0.75, -2.3); // posição ajustada para a traseira da van
   window.leftRearIndicatorGlow.visible = false;
   van.add(window.leftRearIndicatorGlow);
   
   // Adicionar pequenas luzes pontuais para dar efeito de brilho nos indicadores - LADO DIREITO
   window.rightFrontIndicatorGlow = new THREE.PointLight(0xffcc00, 3, 1.5);
-  window.rightFrontIndicatorGlow.position.set(0.35, 0.85, 0.0);
+  window.rightFrontIndicatorGlow.position.set(0.8, 0.75, 2.3); // posição ajustada para a frente da van
   window.rightFrontIndicatorGlow.visible = false;
   van.add(window.rightFrontIndicatorGlow);
   
   window.rightRearIndicatorGlow = new THREE.PointLight(0xffcc00, 3, 1.5);
-  window.rightRearIndicatorGlow.position.set(0.35, 0.85, 0.0);
+  window.rightRearIndicatorGlow.position.set(0.8, 0.75, -2.3); // posição ajustada para a traseira da van
   window.rightRearIndicatorGlow.visible = false;
   van.add(window.rightRearIndicatorGlow);
   
   // Adiciona os faróis (SpotLight) - posicionados exatamente nos faróis da van
-  leftHeadlight = new THREE.SpotLight(0xffffff, 40, 120, Math.PI / 4, 0.6, 1);
-  leftHeadlight.position.set(-0.3, 0.85, 0.0); // posição ajustada para eliminar espaçamento
-  leftHeadlight.target.position.set(-0.3, 0, 20); // alvo mais distante para melhor efeito
+  leftHeadlight = new THREE.SpotLight(0xffffff, 40, 50, Math.PI / 4, 0.8, 1);
+  leftHeadlight.position.set(-0.3, 0.75, 2.3); // posição ajustada para a frente da van
+  leftHeadlight.target.position.set(-0.3, 0, 10); // alvo mais próximo para luz mais concentrada
   leftHeadlight.visible = headlightsOn;
   leftHeadlight.castShadow = true;
   van.add(leftHeadlight);
   van.add(leftHeadlight.target);
 
-  rightHeadlight = new THREE.SpotLight(0xffffff, 40, 120, Math.PI / 4, 0.6, 1);
-  rightHeadlight.position.set(0.3, 0.85, 0.0); // posição ajustada para eliminar espaçamento
-  rightHeadlight.target.position.set(0.3, 0, 20); // alvo mais distante para melhor efeito
+  rightHeadlight = new THREE.SpotLight(0xffffff, 40, 50, Math.PI / 4, 0.8, 1);
+  rightHeadlight.position.set(0.3, 0.75, 2.3); // posição ajustada para a frente da van
+  rightHeadlight.target.position.set(0.3, 0, 10); // alvo mais próximo para luz mais concentrada
   rightHeadlight.visible = headlightsOn;
   rightHeadlight.castShadow = true;
   van.add(rightHeadlight);
   van.add(rightHeadlight.target);
   
-  // Adicionar pequenas luzes pontuais para dar efeito de brilho nos faróis
+  // Adicionar pequenas luzes pontuais para dar efeito de brilho nos faróis frontais
   const leftHeadlightGlow = new THREE.PointLight(0xffffff, 4, 2);
-  leftHeadlightGlow.position.set(-0.3, 0.85, 0.0); // posição ajustada para eliminar espaçamento
+  leftHeadlightGlow.position.set(-0.3, 0.75, 2.3); // posição ajustada para a frente da van
   leftHeadlightGlow.visible = headlightsOn;
   van.add(leftHeadlightGlow);
   
   const rightHeadlightGlow = new THREE.PointLight(0xffffff, 4, 2);
-  rightHeadlightGlow.position.set(0.3, 0.85, 0.0); // posição ajustada para eliminar espaçamento
+  rightHeadlightGlow.position.set(0.3, 0.75, 2.3); // posição ajustada para a frente da van
   rightHeadlightGlow.visible = headlightsOn;
   van.add(rightHeadlightGlow);
+  
+  // Adicionar pequenas luzes pontuais para os faróis traseiros
+  window.leftRearLightGlow = new THREE.PointLight(0xff0000, 2, 1.5);
+  window.leftRearLightGlow.position.set(-0.3, 0.75, -2.3); // posição ajustada para a traseira da van
+  window.leftRearLightGlow.visible = false; // Forçar desligado inicialmente
+  van.add(window.leftRearLightGlow);
+  
+  window.rightRearLightGlow = new THREE.PointLight(0xff0000, 2, 1.5);
+  window.rightRearLightGlow.position.set(0.3, 0.75, -2.3); // posição ajustada para a traseira da van
+  window.rightRearLightGlow.visible = false; // Forçar desligado inicialmente
+  van.add(window.rightRearLightGlow);
+  
+  // Adicionar listener para atualizar as luzes traseiras quando a luz direcional mudar
+  window.addEventListener('directionalLightToggled', function() {
+    if (window.leftRearLightGlow && window.rightRearLightGlow) {
+      window.leftRearLightGlow.visible = !window.isDirectionalLightOn;
+      window.rightRearLightGlow.visible = !window.isDirectionalLightOn;
+    }
+  });
   
   // Iniciar o intervalo de piscar
   startBlinking();
@@ -157,6 +150,11 @@ export function setupLightControls() {
     if (event.key === '4') {
       toggleHeadlights();
     }
+  });
+  
+  // Adicionar event listener para mudanças na luz direcional
+  window.addEventListener('directionalLightChanged', (event) => {
+    updateRearLights(event.detail.isOn);
   });
 }
 
@@ -242,46 +240,42 @@ function updateLightsVisibility(blinkState) {
   
   // Atualizar luzes do indicador esquerdo
   if (leftIndicator || hazardLights) {
-    // Luzes principais
-    leftFrontIndicatorLight.visible = blinkState;
-    leftRearIndicatorLight.visible = blinkState;
-    
-    // Luzes de brilho
-    if (window.leftFrontIndicatorGlow) window.leftFrontIndicatorGlow.visible = blinkState;
-    if (window.leftRearIndicatorGlow) window.leftRearIndicatorGlow.visible = blinkState;
+    // Apenas atualizar as luzes de brilho pequenas
+    window.leftFrontIndicatorGlow.visible = blinkState;
+    window.leftRearIndicatorGlow.visible = blinkState;
   } else {
-    // Luzes principais
-    leftFrontIndicatorLight.visible = false;
-    leftRearIndicatorLight.visible = false;
-    
-    // Luzes de brilho
-    if (window.leftFrontIndicatorGlow) window.leftFrontIndicatorGlow.visible = false;
-    if (window.leftRearIndicatorGlow) window.leftRearIndicatorGlow.visible = false;
+    window.leftFrontIndicatorGlow.visible = false;
+    window.leftRearIndicatorGlow.visible = false;
   }
   
-  // Atualizar luzes do indicador direito
   if (rightIndicator || hazardLights) {
-    // Luzes principais
-    rightFrontIndicatorLight.visible = blinkState;
-    rightRearIndicatorLight.visible = blinkState;
-    
-    // Luzes de brilho
-    if (window.rightFrontIndicatorGlow) window.rightFrontIndicatorGlow.visible = blinkState;
-    if (window.rightRearIndicatorGlow) window.rightRearIndicatorGlow.visible = blinkState;
+    // Apenas atualizar as luzes de brilho pequenas
+    window.rightFrontIndicatorGlow.visible = blinkState;
+    window.rightRearIndicatorGlow.visible = blinkState;
   } else {
-    // Luzes principais
-    rightFrontIndicatorLight.visible = false;
-    rightRearIndicatorLight.visible = false;
-    
-    // Luzes de brilho
-    if (window.rightFrontIndicatorGlow) window.rightFrontIndicatorGlow.visible = false;
-    if (window.rightRearIndicatorGlow) window.rightRearIndicatorGlow.visible = false;
+    window.rightFrontIndicatorGlow.visible = false;
+    window.rightRearIndicatorGlow.visible = false;
   }
 }
 
 export function updateLights() {
   // Esta função pode ser chamada no loop de renderização para atualizações adicionais
   // Atualmente, a lógica de piscar é tratada pelo intervalo
+  
+  // Atualiza as luzes traseiras com base no estado da luz direcional
+  if (window.leftRearLightGlow && window.rightRearLightGlow) {
+    // Força as luzes traseiras a ficarem desligadas quando a luz direcional está ligada
+    if (window.isDirectionalLightOn === true) {
+      window.leftRearLightGlow.visible = false;
+      window.rightRearLightGlow.visible = false;
+    } else {
+      window.leftRearLightGlow.visible = true;
+      window.rightRearLightGlow.visible = true;
+    }
+  }
+  
+  // Chama a função específica para atualizar as luzes traseiras
+  updateRearLights(window.isDirectionalLightOn);
 }
 
 export function cleanupLights() {
@@ -310,11 +304,27 @@ function toggleHeadlights() {
   van.children.forEach(child => {
     if (child.isPointLight && 
         (child.position.x === -0.3 || child.position.x === 0.3) && 
-        child.position.z === 0.0 && 
-        child.position.y === 0.85) {
+        child.position.z === 2.3 && 
+        child.position.y === 0.75) {
       child.visible = headlightsOn;
     }
   });
   
   window.dispatchEvent(new CustomEvent('headlightsToggled'));
+}
+
+// Função para atualizar as luzes traseiras com base no estado da luz direcional
+function updateRearLights(isDirectionalLightOn) {
+  if (!van) return;
+  
+  // Luzes traseiras só ficam visíveis quando a luz direcional está desligada (noite)
+  if (window.leftRearLightGlow) {
+    // Forçar desligado quando a luz direcional está ligada
+    window.leftRearLightGlow.visible = isDirectionalLightOn ? false : true;
+  }
+  
+  if (window.rightRearLightGlow) {
+    // Forçar desligado quando a luz direcional está ligada
+    window.rightRearLightGlow.visible = isDirectionalLightOn ? false : true;
+  }
 }

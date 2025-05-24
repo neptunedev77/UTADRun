@@ -33,7 +33,7 @@ export function createRoad() {
 
     // Poste esquerdo
     const leftPost = createLightPost();
-    leftPost.position.set(-xOff - (sidewalkWidth/2) + 1.3, sidewalkHeight, -roadLength/2);
+    leftPost.position.set(-xOff - (sidewalkWidth/2) + 1.3, 0.3, -roadLength/2); // Y ajustado para 0.3
     bloco.add(leftPost);
 
     // Passeio direito
@@ -44,7 +44,7 @@ export function createRoad() {
 
     // Poste direito
     const rightPost = createLightPost();
-    rightPost.position.set(xOff + (sidewalkWidth/2) - 1.3, sidewalkHeight, -roadLength/2);
+    rightPost.position.set(xOff + (sidewalkWidth/2) - 1.3, 0.3, -roadLength/2); // Y ajustado para 0.3
     bloco.add(rightPost);
 
     // Relva de cada lado do passeio
@@ -99,29 +99,41 @@ function createLightPost() {
   // Mastro vertical
   const pole = new THREE.Mesh(lamppostGeometries.pole, lamppostMaterials.pole);
   pole.position.y = 2.5;
+  pole.castShadow = true;
   pole.receiveShadow = true;
   post.add(pole);
 
   // Disco inferior
   const bottomCircle = new THREE.Mesh(lamppostGeometries.circle, lamppostMaterials.circle);
-  bottomCircle.position.set(0, 0, 0);
+  bottomCircle.position.set(0, 0.1, 0); // Ajustado para 0.1 para ficar logo acima do chão
+  bottomCircle.castShadow = true;
+  bottomCircle.receiveShadow = true;
   post.add(bottomCircle);
 
   // Disco superior
   const topCircle = new THREE.Mesh(lamppostGeometries.circle, lamppostMaterials.circle);
-  topCircle.position.set(0, 4.7, 0);
+  topCircle.position.set(0, 0.2, 0);
+  topCircle.castShadow = true;
+  topCircle.receiveShadow = true;
   post.add(topCircle);
 
   // Lâmpada
   const lampMaterial = lamppostMaterials.lamp.clone();
   const lamp = new THREE.Mesh(lamppostGeometries.lamp, lampMaterial);
   lamp.position.set(0, 5.15, 0);
+  lamp.castShadow = true;
+  lamp.receiveShadow = true;
   post.add(lamp);
 
   // Luz
   const light = new THREE.PointLight(0xffffaa, 20.0, 30);
   light.position.set(0, 5.15, 0);
   light.visible = postsLightsOn;
+  light.castShadow = true; // Permitir que a luz projete sombras
+  light.shadow.mapSize.width = 512; // Resolução da sombra
+  light.shadow.mapSize.height = 512;
+  light.shadow.camera.near = 0.5;
+  light.shadow.camera.far = 30;
   post.add(light);
   
   // Armazena referências para controle
@@ -264,7 +276,9 @@ export function toggleLights(enabled) {
   roadBlocks.forEach(block => {
     block.traverse(child => {
       if (child.isGroup && child.light) {
+        // Configurar a luz
         child.light.visible = enabled;
+        child.light.castShadow = !enabled; // Desativa a sombra circular quando a luz está ligada
         
         if (child.lamp) {
           const lampMaterial = child.lamp.material;
