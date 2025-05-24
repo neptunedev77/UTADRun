@@ -39,6 +39,29 @@ let lastFlightTimeLeft = null;
 // Referência para o elemento da tela de carregamento
 const loadingScreen = document.getElementById('loadingScreen');
 
+// --- ÁUDIO DE FUNDO DO CARRO ---
+let carEngineAudio = null;
+function setupCarEngineAudio() {
+  if (!carEngineAudio) {
+    carEngineAudio = new Audio('assets/audio/car_engine_loop.mp3');
+    carEngineAudio.loop = true;
+    carEngineAudio.volume = 0.35;
+    carEngineAudio.preload = 'auto';
+  }
+}
+function playCarEngineAudio() {
+  if (carEngineAudio && carEngineAudio.paused) {
+    carEngineAudio.currentTime = 0;
+    carEngineAudio.play().catch(() => {});
+  }
+}
+function pauseCarEngineAudio() {
+  if (carEngineAudio && !carEngineAudio.paused) {
+    carEngineAudio.pause();
+  }
+}
+// --- FIM ÁUDIO DE FUNDO ---
+
 // Função para mostrar/esconder a tela de carregamento
 function setLoadingScreen(visible) {
   loadingScreen.style.display = visible ? 'flex' : 'none';
@@ -57,6 +80,8 @@ function startGame() {
     lastTime = performance.now() / 1000;
     gameTime = 0;
     setLoadingScreen(false); // Esconde a tela de carregamento
+    setupCarEngineAudio();
+    playCarEngineAudio();
     console.log('Game started!');
   }
 }
@@ -162,6 +187,11 @@ function togglePause() {
   if (isGameActive) {
     isPaused = !isPaused;
     updatePauseScreen();
+    if (isPaused) {
+      pauseCarEngineAudio();
+    } else {
+      playCarEngineAudio();
+    }
     console.log(isPaused ? 'Game paused' : 'Game resumed');
   }
 }
@@ -250,6 +280,7 @@ function showGameOverScreen() {
   setLoadingScreen(false);
   updatePauseScreen();
   updateHeartsUI();
+  pauseCarEngineAudio();
   // Cria tela de Game Over
   let gameOverScreen = document.getElementById('gameOverScreen');
   if (!gameOverScreen) {
@@ -302,6 +333,7 @@ function restartGame() {
   isGameActive = false;
   setLoadingScreen(true);
   updateHeartsUI();
+  pauseCarEngineAudio();
   window.location.reload();
 }
 

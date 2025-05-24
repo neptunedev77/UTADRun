@@ -303,6 +303,12 @@ export function updateObstacles(deltaTime = 0.016, scene) {
   });
 }
 
+function playSfx(src, volume = 1.0) {
+  const audio = new Audio(src);
+  audio.volume = volume;
+  audio.play().catch(() => {});
+}
+
 /**
  * Verifica colisão entre o jogador e um obstáculo
  * @param {THREE.Object3D} obstacle - O obstáculo a verificar
@@ -327,6 +333,7 @@ function checkCollision(obstacle, playerPosition) {
   if (obstacle.userData.type === 'cavalo') {
     if (distanceX < collisionThresholdX && distanceZ < collisionThresholdZ) {
       // Sempre perde vida ao tocar no cavalo
+      playSfx('assets/audio/horse.mp3', 0.7);
       loseLife();
       const farthestZ = Math.min(...obstacles.map(o => o.position.z));
       obstacle.position.z = farthestZ - spacing - Math.random() * variation;
@@ -342,11 +349,19 @@ function checkCollision(obstacle, playerPosition) {
   // Verifica colisão normal
   if (distanceX < collisionThresholdX && distanceY < collisionThresholdY && distanceZ < collisionThresholdZ) {
     if (obstacle.userData.type === 'beerCrate') {
+      playSfx('assets/audio/beer.mp3', 0.8);
       startFlying();
       const farthestZ = Math.min(...obstacles.map(o => o.position.z));
       obstacle.position.z = farthestZ - spacing - Math.random() * variation;
       obstacle.position.x = getRandomLaneX();
       obstacle.userData.type = 'beerCrate';
+    } else if (obstacle.userData.type === 'tampa' || obstacle.userData.type === 'cone') {
+      playSfx('assets/audio/crash.mp3', 0.7);
+      loseLife();
+      const farthestZ = Math.min(...obstacles.map(o => o.position.z));
+      obstacle.position.z = farthestZ - spacing - Math.random() * variation;
+      obstacle.position.x = getRandomLaneX();
+      obstacle.userData.type = obstacle.userData.type;
     } else {
       loseLife();
       const farthestZ = Math.min(...obstacles.map(o => o.position.z));
