@@ -36,12 +36,49 @@
       font-size: 1.5em;
       color: #ccc;
     }
+    #loadingScreen button {
+      background: #fff;
+      color: #222;
+      font-weight: bold;
+      border: none;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+      font-size: 1.2em;
+      padding: 12px 0;
+      flex: 1;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    #loadingScreen button:hover, #loadingScreen button:focus {
+      background: #e0e0e0;
+      color: #111;
+    }
   </style>
 </head>
 <body>
   <div id="loadingScreen">
     <h1>UTAD RUN</h1>
-    <p>Pressione qualquer tecla para começar</p>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 0; margin-bottom: 24px; width: 100%; max-width: 340px;">
+      <div id="loginArea" style="display: flex; gap: 20px; width: 100%; justify-content: space-between; align-items: center;">
+        <button id="leaderboardBtn" style="flex:1; font-size: 1.2em; padding: 12px 0;">Leaderboard</button>
+        <button id="loginBtn" style="flex:1; font-size: 1.2em; padding: 12px 0;">
+          <span style="display: flex; align-items: center;">
+            <svg width="22" height="22" viewBox="0 0 48 48" style="margin-right: 8px; vertical-align: middle;"><g><path fill="#4285F4" d="M43.6 20.5h-1.9V20H24v8h11.3c-1.6 4.3-5.7 7-11.3 7-6.6 0-12-5.4-12-12s5.4-12 12-12c2.4 0 4.6.7 6.5 2l6.6-6.6C34.3 4.5 29.4 2.5 24 2.5 12.7 2.5 3.5 11.7 3.5 23S12.7 43.5 24 43.5c10.9 0 20.1-8.1 20.1-20.1 0-1.3-.1-2.4-.3-3.4z"/><path fill="#34A853" d="M6.3 14.1l6.6 4.8C14.3 16.1 18.8 13 24 13c2.4 0 4.6.7 6.5 2l6.6-6.6C34.3 4.5 29.4 2.5 24 2.5c-7.2 0-13.4 4.1-16.7 10.1z"/><path fill="#FBBC05" d="M24 43.5c5.7 0 10.6-1.9 14.1-5.2l-6.5-5.3c-2 1.4-4.5 2.2-7.6 2.2-5.6 0-10.3-3.8-12-9l-6.6 5.1C7.1 39.1 14.9 43.5 24 43.5z"/><path fill="#EA4335" d="M43.6 20.5h-1.9V20H24v8h11.3c-1.1 3-3.6 5.2-7.3 5.2-2.1 0-4-.7-5.5-2l-6.6 5.1C18.7 41.1 21.2 43.5 24 43.5c6.6 0 12-5.4 12-12 0-1.3-.2-2.5-.4-3.5z"/></g></svg>
+            <span>Login</span>
+          </span>
+        </button>
+      </div>
+      <div style="display: flex; align-items: center; width: 100%; margin: 18px 0 0 0;">
+        <hr style="flex:1; border:none; border-top:2px solid #444; margin:0 12px 0 0;"> 
+        <span style="font-size: 1.1em; color: #bbb; font-weight: bold; letter-spacing: 1px;">ou</span>
+        <hr style="flex:1; border:none; border-top:2px solid #444; margin:0 0 0 12px;">
+      </div>
+    </div>
+    <p style="margin-top: 0; font-size: 1.3em; color: #ccc; text-align: center;">Pressione uma tecla para começar</p>
   </div>
   <script async src="https://unpkg.com/es-module-shims@2.0.10/dist/es-module-shims.js"></script>
 
@@ -59,6 +96,32 @@
     <div id="speed" class="speed">Velocidade: 1.0x</div>
     <div id="cameraHint" class="camera-hint">[C] Câmara Perspetiva | Luzes: [1] Ambiente: ON | [2] Direcional: ON | [3] Postes: OFF | [4] Faróis: OFF</div>
   </div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-analytics.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCcQP4g1CQQHpMkDerFf0RiUlZ1Pq-j2fA",
+      authDomain: "utadrun-7d3cc.firebaseapp.com",
+      projectId: "utadrun-7d3cc",
+      storageBucket: "utadrun-7d3cc.firebasestorage.app",
+      messagingSenderId: "253134790000",
+      appId: "1:253134790000:web:f3dd9d26632e9c021743b5",
+      measurementId: "G-RZTXJ04QMD"
+    };
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    window.firebaseApp = app;
+    window.firebaseAuth = auth;
+    window.GoogleAuthProvider = GoogleAuthProvider;
+    window.signInWithPopup = signInWithPopup;
+    window.onAuthStateChanged = onAuthStateChanged;
+    window.firestore = { db, doc, getDoc, setDoc };
+  </script>
   <script type="module" src="./src/main.js"></script>
 </body>
 </html>

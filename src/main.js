@@ -39,6 +39,94 @@ let lastFlightTimeLeft = null;
 
 // Referência para o elemento da tela de carregamento
 const loadingScreen = document.getElementById('loadingScreen');
+const loginBtn = document.getElementById('loginBtn');
+const leaderboardBtn = document.getElementById('leaderboardBtn');
+
+const userInfoDiv = document.getElementById('userInfo');
+
+function showUserLoggedIn(user) {
+  if (loginBtn) {
+    const parent = loginBtn.parentNode;
+    let userDiv = document.getElementById('userLoggedIn');
+    if (!userDiv) {
+      userDiv = document.createElement('div');
+      userDiv.id = 'userLoggedIn';
+      userDiv.style.display = 'flex';
+      userDiv.style.alignItems = 'center';
+      userDiv.style.gap = '10px';
+      userDiv.style.justifyContent = 'flex-end';
+      userDiv.style.flex = '1';
+      userDiv.style.fontSize = '1.1em';
+      userDiv.style.color = '#222';
+    }
+    userDiv.innerHTML = `
+      <span style="font-weight:bold; color: #fff;">${user.displayName}</span>
+      <button id="logoutBtn" style="font-size: 1em; padding: 6px 18px; border-radius: 8px; border: none; background: #e53935; color: #fff; cursor: pointer; font-weight: bold; transition: background 0.2s;">Logout</button>
+      <style>
+        #logoutBtn:hover { background: #b71c1c !important; }
+      </style>
+    `;
+    if (parent && parent.contains(loginBtn)) {
+      parent.replaceChild(userDiv, loginBtn);
+    }
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+      logoutBtn.onclick = async () => {
+        await window.firebaseAuth.signOut();
+      };
+    }
+  }
+}
+
+function showUserLoggedOut() {
+  if (loginBtn) {
+    const parent = document.getElementById('userLoggedIn')?.parentNode || loginBtn.parentNode;
+    const userDiv = document.getElementById('userLoggedIn');
+    if (userDiv && parent) {
+      parent.replaceChild(loginBtn, userDiv);
+    }
+    loginBtn.style.display = '';
+  }
+}
+
+// Monitorar estado de autenticação
+if (window.onAuthStateChanged && window.firebaseAuth) {
+  console.log('[AUTH] Registrando onAuthStateChanged');
+  window.onAuthStateChanged(window.firebaseAuth, (user) => {
+    console.log('[AUTH] onAuthStateChanged', user);
+    if (user) {
+      showUserLoggedIn(user);
+    } else {
+      showUserLoggedOut();
+    }
+  });
+} else {
+  console.log('[AUTH] onAuthStateChanged ou firebaseAuth não disponível');
+}
+
+if (loginBtn) {
+  loginBtn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const auth = window.firebaseAuth;
+    const provider = new window.GoogleAuthProvider();
+    try {
+      console.log('[AUTH] Iniciando login Google');
+      await window.signInWithPopup(auth, provider);
+      window.location.reload(); // Forçar refresh após login
+    } catch (error) {
+      alert('Erro ao fazer login com Google.');
+      console.error('[AUTH] Erro login Google', error);
+    }
+  });
+} else {
+  console.log('[AUTH] loginBtn não encontrado para adicionar listener');
+}
+if (leaderboardBtn) {
+  leaderboardBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    showLeaderboardModal();
+  });
+}
 
 // --- ÁUDIO DE FUNDO DO CARRO ---
 let carEngineAudio = null;
@@ -281,6 +369,44 @@ function updateHeartsUI() {
 createHeartsUI();
 updateHeartsUI();
 
+// Salva/atualiza o melhor score do usuário no Firestore
+async function saveBestScore(user, score) {
+  if (!window.firestore || !user) {
+    console.log('[LEADERBOARD] Firestore não disponível ou usuário não autenticado');
+    return;
+  }
+  const { db, doc, getDoc, setDoc } = window.firestore;
+  const userId = user.uid;
+  const leaderboardRef = doc(db, 'leaderboard', userId);
+  try {
+    const snap = await getDoc(leaderboardRef);
+    if (!snap.exists()) {
+      console.log('[LEADERBOARD] A criar novo score para', userId, score);
+      await setDoc(leaderboardRef, {
+        bestscore: score,
+        created_at: new Date().toISOString(),
+        name: user.displayName || '',
+        email: user.email || ''
+      });
+    } else {
+      const data = snap.data();
+      if (typeof data.bestscore !== 'number' || score > data.bestscore) {
+        console.log('[LEADERBOARD] Atualizando score para', userId, score);
+        await setDoc(leaderboardRef, {
+          bestscore: score,
+          created_at: new Date().toISOString(),
+          name: user.displayName || '',
+          email: user.email || ''
+        });
+      } else {
+        console.log('[LEADERBOARD] Score não atualizado, score antigo é maior ou igual', userId, data.bestscore, score);
+      }
+    }
+  } catch (e) {
+    console.error('[LEADERBOARD] Erro ao salvar score', e);
+  }
+}
+
 function showGameOverScreen() {
   isGameOver = true;
   isGameActive = false;
@@ -288,6 +414,11 @@ function showGameOverScreen() {
   updatePauseScreen();
   updateHeartsUI();
   pauseCarEngineAudio();
+  // Salvar bestscore se autenticado
+  if (window.firebaseAuth && window.firebaseAuth.currentUser) {
+    const score = Math.floor(getDistance());
+    saveBestScore(window.firebaseAuth.currentUser, score);
+  }
   // Cria tela de Game Over
   let gameOverScreen = document.getElementById('gameOverScreen');
   if (!gameOverScreen) {
@@ -577,5 +708,110 @@ function updateFlightTimerUI() {
     flightTimer.style.display = 'block';
   } else {
     flightTimer.style.display = 'none';
+  }
+}
+
+// Função para criar e mostrar o modal da leaderboard
+async function showLeaderboardModal() {
+  // Se já existe, não cria outro
+  if (document.getElementById('leaderboardModal')) return;
+  // Cria overlay
+  const overlay = document.createElement('div');
+  overlay.id = 'leaderboardModal';
+  overlay.style.position = 'fixed';
+  overlay.style.top = '0';
+  overlay.style.left = '0';
+  overlay.style.width = '100vw';
+  overlay.style.height = '100vh';
+  overlay.style.background = 'rgba(0,0,0,0.85)';
+  overlay.style.display = 'flex';
+  overlay.style.justifyContent = 'center';
+  overlay.style.alignItems = 'center';
+  overlay.style.zIndex = '3000';
+
+  // Modal box
+  const modal = document.createElement('div');
+  modal.style.background = 'linear-gradient(135deg, #222 60%, #444 100%)';
+  modal.style.borderRadius = '18px';
+  modal.style.boxShadow = '0 8px 32px rgba(0,0,0,0.7)';
+  modal.style.padding = '36px 32px 28px 32px';
+  modal.style.minWidth = '340px';
+  modal.style.maxWidth = '90vw';
+  modal.style.color = '#ffe066';
+  modal.style.fontFamily = 'Arial, sans-serif';
+  modal.style.display = 'flex';
+  modal.style.flexDirection = 'column';
+  modal.style.alignItems = 'center';
+
+  // Título
+  const title = document.createElement('h2');
+  title.textContent = 'Leaderboard';
+  title.style.margin = '0 0 18px 0';
+  title.style.fontSize = '2.2em';
+  title.style.letterSpacing = '1px';
+  title.style.color = '#ffe066';
+  title.style.textShadow = '0 2px 12px #000';
+  modal.appendChild(title);
+
+  // Tabela
+  const table = document.createElement('table');
+  table.style.width = '100%';
+  table.style.borderCollapse = 'collapse';
+  table.style.marginBottom = '18px';
+  const thead = document.createElement('thead');
+  thead.innerHTML = `<tr style="color:#fff;font-size:1.1em;"><th style='text-align:left;padding:6px 12px;'>Nome</th><th style='text-align:right;padding:6px 12px;'>Score</th></tr>`;
+  table.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  tbody.innerHTML = `<tr><td colspan='2' style='text-align:center;color:#bbb;'>A carregar...</td></tr>`;
+  table.appendChild(tbody);
+  modal.appendChild(table);
+
+  // Botão fechar
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = 'Fechar';
+  closeBtn.style.background = '#e53935';
+  closeBtn.style.color = '#fff';
+  closeBtn.style.fontWeight = 'bold';
+  closeBtn.style.fontSize = '1.1em';
+  closeBtn.style.border = 'none';
+  closeBtn.style.borderRadius = '8px';
+  closeBtn.style.padding = '10px 32px';
+  closeBtn.style.marginTop = '10px';
+  closeBtn.style.cursor = 'pointer';
+  closeBtn.onmouseenter = () => closeBtn.style.background = '#b71c1c';
+  closeBtn.onmouseleave = () => closeBtn.style.background = '#e53935';
+  closeBtn.onclick = () => overlay.remove();
+  modal.appendChild(closeBtn);
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  // Buscar leaderboard do Firestore
+  if (window.firestore) {
+    const { db } = window.firestore;
+    // Importar query, collection, orderBy, limit, getDocs dinamicamente
+    const { collection, query, orderBy, limit, getDocs } = await import('https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js');
+    try {
+      const q = query(collection(db, 'leaderboard'), orderBy('bestscore', 'desc'), limit(10));
+      const snap = await getDocs(q);
+      let html = '';
+      let pos = 1;
+      const currentUid = (window.firebaseAuth && window.firebaseAuth.currentUser) ? window.firebaseAuth.currentUser.uid : null;
+      snap.forEach(doc => {
+        const data = doc.data();
+        const isCurrentUser = currentUid && doc.id === currentUid;
+        html += `<tr style='background:${isCurrentUser ? '#ffe06655' : ''}'>`+
+          `<td style='padding:6px 12px;color:#fff;'>${data.name ? data.name : '<i>Desconhecido</i>'}</td>`+
+          `<td style='padding:6px 12px;text-align:right;font-weight:bold;color:#ffe066;'>${data.bestscore}</td>`+
+        `</tr>`;
+        pos++;
+      });
+      if (!html) html = `<tr><td colspan='2' style='text-align:center;color:#bbb;'>Sem scores ainda.</td></tr>`;
+      tbody.innerHTML = html;
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan='2' style='text-align:center;color:#f88;'>Erro ao carregar leaderboard.</td></tr>`;
+    }
+  } else {
+    tbody.innerHTML = `<tr><td colspan='2' style='text-align:center;color:#f88;'>Firestore não disponível.</td></tr>`;
   }
 }
