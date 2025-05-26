@@ -19,7 +19,7 @@ let sceneRef = null;
 let cloudGenerationTimer = 0;
 let cloudGenerationInterval = 3; // Gerar nova nuvem a cada 3 segundos (mais frequente)
 let cloudGenerationEnabled = false; // Desativado até que a cena seja configurada
-let maxClouds = 50; // Aumentado para 50 nuvens máximas para maior densidade
+let maxClouds = 15;
 
 export function setupScene() {
   const scene = new THREE.Scene();
@@ -133,8 +133,8 @@ function createClouds(scene, textureLoader) {
   const cloudEdgeMaterial = cloudBaseMaterial.clone();
   cloudEdgeMaterial.opacity = 0.7;
   
-  // Criar nuvens volúmicas em vez de planas - muito mais nuvens iniciais
-  for (let i = 0; i < 80; i++) {
+  // Criar nuvens volúmicas em vez de planas
+  for (let i = 0; i < 15; i++) {
     // Criar um grupo para cada nuvem
     const cloudGroup = new THREE.Group();
     
@@ -147,8 +147,8 @@ function createClouds(scene, textureLoader) {
     const coreMesh = new THREE.Mesh(coreGeometry, cloudBaseMaterial.clone());
     cloudGroup.add(coreMesh);
     
-    // Adicionar mais formas irregulares para criar nuvens mais realistas
-    const numParts = 12 + Math.floor(Math.random() * 8); // 12-20 partes por nuvem
+    // Adicionar formas irregulares para criar nuvens mais realistas
+    const numParts = 8 + Math.floor(Math.random() * 4); // 8-12 partes por nuvem
     
     for (let j = 0; j < numParts; j++) {
       const partSize = (0.3 + Math.random() * 0.7) * coreSize;
@@ -561,8 +561,8 @@ function generateNewCloud() {
   const coreMesh = new THREE.Mesh(coreGeometry, cloudBaseMaterial);
   cloudGroup.add(coreMesh);
   
-  // Adicionar mais formas irregulares ao redor do núcleo para dar volume
-  const numParts = 8 + Math.floor(Math.random() * 5); // Aumentado para 8-12 partes para maior densidade
+  // Adicionar formas irregulares ao redor do núcleo para dar volume
+  const numParts = 8 + Math.floor(Math.random() * 4); // 8-12 partes
   
   for (let i = 0; i < numParts; i++) {
     const partSize = (0.4 + Math.random() * 0.6) * coreSize;
