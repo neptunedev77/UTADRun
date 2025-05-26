@@ -10,6 +10,7 @@ let camera;
 let orthographicCamera;
 let cameraMode = 'default';
 let clouds = [];
+let cloudsEnabled = false;
 
 // Referência à cena para adicionar novas nuvens
 let sceneRef = null;
@@ -22,16 +23,13 @@ let maxClouds = 50; // Aumentado para 50 nuvens máximas para maior densidade
 
 export function setupScene() {
   const scene = new THREE.Scene();
+  sceneRef = scene;
   
   // Carregar a textura do céu
   const textureLoader = new THREE.TextureLoader();
   const skyTexture = textureLoader.load('assets/textures/sky.png');
   scene.background = skyTexture;
   
-  // Criar nuvens iniciais e configurar o sistema de geração contínua
-  createClouds(scene, textureLoader);
-  setupCloudGeneration(scene);
-
   // Câmera em perspectiva
   camera = new THREE.PerspectiveCamera(
     75,
@@ -111,6 +109,7 @@ export function setupScene() {
 
 // Função para criar nuvens mais volúmicas e realistas
 function createClouds(scene, textureLoader) {
+  if (!cloudsEnabled) return;
   // Criar textura de nuvem mais detalhada
   const cloudTexture = new THREE.CanvasTexture(generateCloudTexture());
   
@@ -324,6 +323,7 @@ function generateCloudTexture() {
 // Função para atualizar as nuvens (original - desativada)
 // Esta função foi substituída pela nova versão abaixo
 function updateCloudsOriginal(deltaTime = 0.016) {
+  if (!cloudsEnabled) return;
   clouds.forEach(cloud => {
     // Mover a nuvem na direção definida
     cloud.mesh.position.x += cloud.direction.x * cloud.speed;
@@ -422,6 +422,7 @@ function updateCameraHint() {
 
 // Função para configurar a referência à cena
 export function setupCloudGeneration(scene) {
+  if (!cloudsEnabled) return;
   sceneRef = scene;
   cloudGenerationEnabled = true;
   console.log('Cloud generation system initialized');
@@ -429,6 +430,7 @@ export function setupCloudGeneration(scene) {
 
 // Função para atualizar as nuvens
 export function updateClouds(deltaTime = 0.016) {
+  if (!cloudsEnabled) return;
   // Se a geração de nuvens não estiver ativada ou não houver referência à cena, retornar
   if (!cloudGenerationEnabled || !sceneRef) {
     return;
@@ -513,6 +515,7 @@ export function updateClouds(deltaTime = 0.016) {
 
 // Função para gerar uma nova nuvem
 function generateNewCloud() {
+  if (!cloudsEnabled) return;
   // Criar textura de nuvem
   const cloudTexture = new THREE.CanvasTexture(generateCloudTexture());
   
@@ -617,4 +620,40 @@ function updateOrthographicCamera(car) {
     orthographicCamera.position.z = car.position.z;
     orthographicCamera.lookAt(car.position.x, 0, car.position.z);
   }
+}
+
+export function enableClouds() {
+  if (!cloudsEnabled) {
+    cloudsEnabled = true;
+    if (sceneRef) {
+      createClouds(sceneRef, new THREE.TextureLoader());
+    }
+  }
+}
+
+export function disableClouds() {
+  if (cloudsEnabled) {
+    cloudsEnabled = false;
+    // Remove todas as nuvens da cena
+    if (sceneRef) {
+      clouds.forEach(cloud => {
+        if (cloud.mesh && cloud.mesh.parent) {
+          cloud.mesh.parent.remove(cloud.mesh);
+        }
+      });
+    }
+    clouds = [];
+  }
+}
+
+export function toggleClouds() {
+  if (cloudsEnabled) {
+    disableClouds();
+  } else {
+    enableClouds();
+  }
+}
+
+export function isCloudsEnabled() {
+  return cloudsEnabled;
 }

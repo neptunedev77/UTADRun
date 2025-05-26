@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { setupScene, toggleLight, setCameraMode, getActiveCamera } from './sceneSetup.js';
+import { setupScene, toggleLight, setCameraMode, getActiveCamera, toggleClouds, isCloudsEnabled } from './sceneSetup.js';
 import { updateClouds } from './sceneSetup.js';
 import { createRoad, updateRoad, toggleLights, getPostsLightsState } from './roadManager.js';
 import { createPlayer, setupPlayerControls, updatePlayer, getHeadlightsState, triggerCollisionAnimation, setBlockPlayerInput, isVanFlying, getFlyingStartTime, getFlyingDuration, getPlayerPosition, isVanDescending, getFlyingTimeLeft } from './playerManager.js';
@@ -154,6 +154,12 @@ function init() {
         window.clearHitboxes(scene);
       }
     }
+
+    if (event.key.toLowerCase() === 'n') {
+      toggleClouds();
+      console.log('Nuvens ' + (isCloudsEnabled() ? 'ativadas' : 'desativadas'));
+      updateLightingHint();
+    }
   });
 
     window.addEventListener('headlightsToggled', () => {
@@ -174,9 +180,9 @@ function updateLightingHint() {
     const directional = toggleLight('directional', null, true) ? "ON" : "OFF";
     const streetLights = getPostsLightsState() ? "ON" : "OFF";
     const headlights = getHeadlightsState() ? "ON" : "OFF";
-    
+    const clouds = isCloudsEnabled() ? "ON" : "OFF";
     hintElement.textContent = 
-      `${cameraText} | [P] Pausar | [H] Hitboxes | Luzes: [1] Ambiente: ${ambient}` +
+      `${cameraText} | [P] Pausar | [H] Hitboxes | [N] Nuvens: ${clouds} | Luzes: [1] Ambiente: ${ambient}` +
       ` | [2] Direcional: ${directional}` +
       ` | [3] Postes: ${streetLights}` +
       ` | [4] Faróis: ${headlights}`;
