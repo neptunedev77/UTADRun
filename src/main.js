@@ -15,9 +15,9 @@ import './easterEggConfetti.js';
 const GAME_CONFIG = {
     FPS: 60,
     FIXED_TIMESTEP: 1 / 60,
-    MAX_FRAME_TIME: 0.2,
+    MAX_FRAME_TIME: 0.1, // Reduzido para evitar saltos grandes
     UI_UPDATE_INTERVAL: 100,
-    MAX_PHYSICS_STEPS: 10
+    MAX_PHYSICS_STEPS: 3  // Reduzido para evitar espiral de morte
 };
 
 // Estado do jogo
@@ -501,7 +501,7 @@ function updateGame(deltaTime) {
     // Atualiza o tempo total de jogo
     gameTime += deltaTime;
     
-    // Atualiza a física do jogo com passo de tempo fixo
+    // Atualiza a física do jogo com passo de tempo fixo e limita o número de passos
     let steps = 0;
     while (accumulator >= GAME_CONFIG.FIXED_TIMESTEP && steps < GAME_CONFIG.MAX_PHYSICS_STEPS) {
         // Atualiza a lógica do jogo com passo de tempo fixo
@@ -519,9 +519,9 @@ function updateGame(deltaTime) {
         steps++;
     }
     
-    // Se estivermos atrasados, pula alguns frames para recuperar
-    if (accumulator > GAME_CONFIG.FIXED_TIMESTEP * 2) {
-        console.warn('Atraso na física do jogo, pulando frames...');
+    // Se atingimos o máximo de passos, descartamos o acumulador restante para evitar espiral de morte
+    if (steps >= GAME_CONFIG.MAX_PHYSICS_STEPS && accumulator > 0) {
+        console.warn(`Limite de passos físicos atingido (${steps}), descartando acumulador: ${accumulator.toFixed(4)}s`);
         accumulator = 0;
     }
     
@@ -587,6 +587,9 @@ function animate(currentTime) {
     // Atualiza as nuvens
     updateClouds(deltaTime);
     
+    // Limpeza de objetos removidos
+    cleanupRemovedObjects();
+    
     // Renderiza a cena
     if (scene && camera) {
       renderer.render(scene, getActiveCamera());
@@ -612,6 +615,80 @@ function updateFpsCounter(currentTime) {
         frameCount = 0;
         lastFpsUpdate = currentTime;
     }
+}
+
+/**
+ * Limpa objetos removidos da cena e libera memória
+ * Esta função é chamada a cada frame para garantir que objetos removidos
+ * tenham seus recursos liberados corretamente
+ */
+function cleanupRemovedObjects() {
+    if (!scene) return;
+    
+    // Lista de objetos marcados para remoção
+    const objectsToRemove = [];
+    
+    // Percorre todos os objetos na cena
+    scene.traverse((object) => {
+        // Verifica se o objeto está marcado para remoção
+        if (object.userData && object.userData.markedForRemoval) {
+            objectsToRemove.push(object);
+        }
+    });
+    
+    // Remove e libera recursos dos objetos marcados
+    objectsToRemove.forEach((object) => {
+        // Remove da cena
+        if (object.parent) {
+            object.parent.remove(object);
+        }
+        
+        // Libera recursos de geometria
+        if (object.geometry) {
+            object.geometry.dispose();
+        }
+        
+        // Libera recursos de materiais
+        if (object.material) {
+            if (Array.isArray(object.material)) {
+                // Se for um array de materiais
+                object.material.forEach(material => {
+                    disposeMaterial(material);
+                });
+            } else {
+                // Se for um único material
+                disposeMaterial(object.material);
+            }
+        }
+        
+        // Libera recursos de texturas em userData se existirem
+        if (object.userData && object.userData.textures) {
+            object.userData.textures.forEach(texture => {
+                if (texture && texture.dispose) {
+                    texture.dispose();
+                }
+            });
+        }
+    });
+}
+
+/**
+ * Função auxiliar para liberar recursos de um material
+ * @param {THREE.Material} material - Material a ser liberado
+ */
+function disposeMaterial(material) {
+    if (!material) return;
+    
+    // Libera texturas associadas ao material
+    for (const prop in material) {
+        const value = material[prop];
+        if (value && typeof value === 'object' && 'isTexture' in value) {
+            value.dispose();
+        }
+    }
+    
+    // Libera o material em si
+    material.dispose();
 }
 
 function drawHitboxes() {
@@ -655,7 +732,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 export function setupPlayerControlsWithBlock() {
   window.addEventListener('keydown', (event) => {
-    if (blockPlayerInput) {
+    // Only block input if it's not the W key for jumping
+    if (blockPlayerInput && event.key.toLowerCase() !== 'w') {
       event.preventDefault();
       return;
     }

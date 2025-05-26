@@ -68,28 +68,38 @@ const movementSmoothness = 0.11;
 // Ângulo máximo de rotação durante curvas (em radianos)
 const maxTurnAngle = Math.PI / 8;
 
-// Cria o sistema de partículas
+// Cria o sistema de partículas usando instanced rendering
 function createParticleSystem(scene) {
-  const particleGeometry = new THREE.BufferGeometry();
-  const particleMaterial = new THREE.PointsMaterial({
-    size: particleSize,
-    vertexColors: true,
+  // Usar uma geometria base simples para instancing
+  const particleBaseGeometry = new THREE.PlaneGeometry(particleSize, particleSize);
+  
+  // Material para instanced rendering
+  const particleMaterial = new THREE.MeshBasicMaterial({
     transparent: true,
     opacity: 0.8,
-    blending: THREE.AdditiveBlending
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide,
+    depthWrite: false
   });
   
-  // Cria partículas iniciais (serão posicionadas dinamicamente)
-  const positions = [];
-  const colors = [];
+  // Criar instanced mesh
+  particleSystem = new THREE.InstancedMesh(particleBaseGeometry, particleMaterial, maxParticles);
+  particleSystem.instanceMatrix.setUsage(THREE.DynamicDrawUsage); // Otimiza para atualizações frequentes
+  particleSystem.visible = false;
   
+  // Matriz de transformação para cada instância
+  const matrix = new THREE.Matrix4();
+  const color = new THREE.Color();
+  
+  // Inicializar partículas
   for (let i = 0; i < maxParticles; i++) {
-    // Posições iniciais serão atualizadas durante o jogo
-    positions.push(0, 0, 0);
+    // Posicionar fora da tela inicialmente
+    matrix.makeTranslation(-1000, -1000, -1000);
+    particleSystem.setMatrixAt(i, matrix);
     
-    // Cores aleatórias da paleta
-    const color = new THREE.Color(particleColors[Math.floor(Math.random() * particleColors.length)]);
-    colors.push(color.r, color.g, color.b);
+    // Definir cor aleatória da paleta
+    color.set(particleColors[Math.floor(Math.random() * particleColors.length)]);
+    particleSystem.setColorAt(i, color);
     
     // Inicializa partículas inativas
     particles.push({
@@ -101,77 +111,102 @@ function createParticleSystem(scene) {
         Math.random() * 2 - 1,
         Math.random() * 2 - 1,
         Math.random() * 2 - 1
-      ).normalize()
+      ).normalize(),
+      matrix: new THREE.Matrix4(),
+      position: new THREE.Vector3(-1000, -1000, -1000),
+      scale: 1.0
     });
   }
   
-  particleGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  particleGeometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  // Marcar para atualização inicial
+  particleSystem.instanceMatrix.needsUpdate = true;
+  if (particleSystem.instanceColor) particleSystem.instanceColor.needsUpdate = true;
   
-  particleSystem = new THREE.Points(particleGeometry, particleMaterial);
-  particleSystem.visible = false;
   scene.add(particleSystem);
 }
 
-// Atualiza as partículas
+// Atualiza as partículas usando instanced rendering
 function updateParticles(deltaTime) {
   if (!particleSystem) return;
   
-  const positions = particleSystem.geometry.attributes.position.array;
-  const colors = particleSystem.geometry.attributes.color.array;
+  let needsUpdate = false;
+  const matrix = new THREE.Matrix4();
+  const color = new THREE.Color();
+  const quaternion = new THREE.Quaternion();
+  const scale = new THREE.Vector3(1, 1, 1);
   
-  particles.forEach((particle, i) => {
-    const idx = i * 3;
+  // Apenas atualiza partículas ativas
+  for (let i = 0; i < particles.length; i++) {
+    const particle = particles[i];
     
     if (particle.active) {
+      needsUpdate = true;
+      
       // Atualiza posição
-      positions[idx] += particle.direction.x * particle.speed * 60 * deltaTime;
-      positions[idx + 1] += particle.direction.y * particle.speed * 60 * deltaTime;
-      positions[idx + 2] += particle.direction.z * particle.speed * 60 * deltaTime;
+      particle.position.x += particle.direction.x * particle.speed * 60 * deltaTime;
+      particle.position.y += particle.direction.y * particle.speed * 60 * deltaTime;
+      particle.position.z += particle.direction.z * particle.speed * 60 * deltaTime;
       
       // Atualiza vida
       particle.life -= deltaTime;
       
-      // Atualiza opacidade baseado na vida
-      const colorIdx = i * 3;
-      colors[colorIdx + 3] = particle.life / particle.maxLife; // Alfa
+      // Escala baseada na vida (diminui conforme envelhece)
+      const lifeRatio = particle.life / particle.maxLife;
+      scale.set(lifeRatio, lifeRatio, lifeRatio);
+      
+      // Atualiza a matriz de transformação
+      matrix.compose(particle.position, quaternion, scale);
+      particleSystem.setMatrixAt(i, matrix);
+      
+      // Atualiza cor (opacidade baseada na vida)
+      if (particleSystem.instanceColor) {
+        color.set(particleColors[Math.floor(Math.random() * particleColors.length)]);
+        color.multiplyScalar(lifeRatio); // Escurece conforme envelhece
+        particleSystem.setColorAt(i, color);
+      }
       
       // Desativa partícula se a vida acabar
       if (particle.life <= 0) {
         particle.active = false;
         // Move para longe para não ser renderizada
-        positions[idx] = -1000;
-        positions[idx + 1] = -1000;
-        positions[idx + 2] = -1000;
+        particle.position.set(-1000, -1000, -1000);
+        matrix.makeTranslation(-1000, -1000, -1000);
+        particleSystem.setMatrixAt(i, matrix);
       }
     }
-  });
+  }
   
-  // Atualiza os buffers
-  particleSystem.geometry.attributes.position.needsUpdate = true;
-  particleSystem.geometry.attributes.color.needsUpdate = true;
+  // Só atualiza os buffers se alguma partícula ativa foi modificada
+  if (needsUpdate) {
+    particleSystem.instanceMatrix.needsUpdate = true;
+    if (particleSystem.instanceColor) particleSystem.instanceColor.needsUpdate = true;
+  }
 }
 
-// Emite partículas
+// Emite partículas usando instanced rendering
 function emitParticles(position, count = 10) {
   if (!particleSystem) return;
   
-  const positions = particleSystem.geometry.attributes.position.array;
+  const matrix = new THREE.Matrix4();
+  const color = new THREE.Color();
+  const quaternion = new THREE.Quaternion();
+  const scale = new THREE.Vector3(1, 1, 1);
   
   let emitted = 0;
   for (let i = 0; i < particles.length && emitted < count; i++) {
     if (!particles[i].active) {
-      const idx = i * 3;
-      
-      // Define posição inicial
-      positions[idx] = position.x + (Math.random() - 0.5) * 0.5;
-      positions[idx + 1] = position.y + (Math.random() - 0.5) * 0.5;
-      positions[idx + 2] = position.z + (Math.random() - 0.5) * 0.5;
+      // Define posição inicial com pequena variação aleatória
+      particles[i].position.set(
+        position.x + (Math.random() - 0.5) * 0.5,
+        position.y + (Math.random() - 0.5) * 0.5,
+        position.z + (Math.random() - 0.5) * 0.5
+      );
       
       // Reinicia partícula
       particles[i].active = true;
       particles[i].life = particles[i].maxLife;
       particles[i].speed = 0.05 + Math.random() * 0.1;
+      particles[i].scale = 1.0;
       
       // Direção aleatória com leve tendência para cima
       particles[i].direction.set(
@@ -180,42 +215,83 @@ function emitParticles(position, count = 10) {
         (Math.random() - 0.5) * 2
       ).normalize();
       
+      // Atualiza matriz de transformação
+      matrix.compose(particles[i].position, quaternion, scale);
+      particleSystem.setMatrixAt(i, matrix);
+      
+      // Define cor aleatória da paleta
+      if (particleSystem.instanceColor) {
+        color.set(particleColors[Math.floor(Math.random() * particleColors.length)]);
+        particleSystem.setColorAt(i, color);
+      }
+      
       emitted++;
     }
   }
+  
+  // Atualiza os buffers apenas se alguma partícula foi emitida
+  if (emitted > 0) {
+    particleSystem.instanceMatrix.needsUpdate = true;
+    if (particleSystem.instanceColor) particleSystem.instanceColor.needsUpdate = true;
+  }
 }
 
+// Emite partículas vermelhas usando instanced rendering
 function emitRedParticles(position, count = 10) {
   if (!particleSystem) return;
-  const positions = particleSystem.geometry.attributes.position.array;
-  const colors = particleSystem.geometry.attributes.color.array;
+  
+  const matrix = new THREE.Matrix4();
+  const color = new THREE.Color();
+  const quaternion = new THREE.Quaternion();
+  const scale = new THREE.Vector3(1, 1, 1);
+  
   let emitted = 0;
   for (let i = 0; i < particles.length && emitted < count; i++) {
     if (!particles[i].active) {
-      const idx = i * 3;
-      // Define posição inicial
-      positions[idx] = position.x + (Math.random() - 0.5) * 0.5;
-      positions[idx + 1] = position.y + (Math.random() - 0.5) * 0.5;
-      positions[idx + 2] = position.z + (Math.random() - 0.5) * 0.5;
+      // Define posição inicial com pequena variação aleatória
+      particles[i].position.set(
+        position.x + (Math.random() - 0.5) * 0.5,
+        position.y + (Math.random() - 0.5) * 0.5,
+        position.z + (Math.random() - 0.5) * 0.5
+      );
+      
       // Reinicia partícula
       particles[i].active = true;
       particles[i].life = particles[i].maxLife * 0.7; // vida mais curta
       particles[i].speed = 0.09 + Math.random() * 0.13;
-      // Direção aleatória
+      particles[i].scale = 1.0;
+      
+      // Direção aleatória com maior tendência para cima
       particles[i].direction.set(
         (Math.random() - 0.5) * 2,
         Math.random() * 0.7 + 0.7, // Mais para cima
         (Math.random() - 0.5) * 2
       ).normalize();
-      // Força cor vermelha
-      colors[idx] = 1.0; // R
-      colors[idx + 1] = 0.1 + Math.random() * 0.1; // G
-      colors[idx + 2] = 0.1 + Math.random() * 0.1; // B
+      
+      // Atualiza matriz de transformação
+      matrix.compose(particles[i].position, quaternion, scale);
+      particleSystem.setMatrixAt(i, matrix);
+      
+      // Define cor vermelha
+      if (particleSystem.instanceColor) {
+        // Tons de vermelho
+        color.setRGB(
+          1.0,                         // R
+          0.1 + Math.random() * 0.1,   // G
+          0.1 + Math.random() * 0.1    // B
+        );
+        particleSystem.setColorAt(i, color);
+      }
+      
       emitted++;
     }
   }
-  particleSystem.geometry.attributes.position.needsUpdate = true;
-  particleSystem.geometry.attributes.color.needsUpdate = true;
+  
+  // Atualiza os buffers apenas se alguma partícula foi emitida
+  if (emitted > 0) {
+    particleSystem.instanceMatrix.needsUpdate = true;
+    if (particleSystem.instanceColor) particleSystem.instanceColor.needsUpdate = true;
+  }
 }
 
 export function createPlayer(scene) {
@@ -315,8 +391,9 @@ export function setupPlayerControls() {
         updateLanePosition();
       }
     }
-    // Salto real: espaço ou seta para cima (se não está a saltar nem a voar)
-    if ((event.key === ' ' || event.key === 'ArrowUp') && !isVanFlying() && !isJumping) {
+    // Salto real: espaço, seta para cima ou W (se não está a saltar nem a voar)
+    const key = event.key.toLowerCase();
+    if ((key === ' ' || key === 'arrowup' || key === 'w') && !isVanFlying() && !isJumping) {
       isJumping = true;
       jumpStartTime = performance.now() / 1000;
       playVanAnimation(1); // Animação de salto, se existir
