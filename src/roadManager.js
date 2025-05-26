@@ -32,9 +32,11 @@ export function createRoad() {
     bloco.add(leftWalk);
 
     // Poste esquerdo
-    const leftPost = createLightPost();
+    const leftPost = lamppostPool.get();
+    leftPost.visible = true;
     leftPost.position.set(-xOff - (sidewalkWidth/2) + 1.3, 0.3, -roadLength/2); // Y ajustado para 0.3
     bloco.add(leftPost);
+    bloco.leftPost = leftPost; // Store reference for cleanup
 
     // Passeio direito
     const rightWalk = createSidewalkMesh();
@@ -43,9 +45,11 @@ export function createRoad() {
     bloco.add(rightWalk);
 
     // Poste direito
-    const rightPost = createLightPost();
+    const rightPost = lamppostPool.get();
+    rightPost.visible = true;
     rightPost.position.set(xOff + (sidewalkWidth/2) - 1.3, 0.3, -roadLength/2); // Y ajustado para 0.3
     bloco.add(rightPost);
+    bloco.rightPost = rightPost; // Store reference for cleanup
 
     // Relva de cada lado do passeio
     const grassXOff = (roadWidth / 2) + sidewalkWidth + (grassWidth / 2);
@@ -93,7 +97,53 @@ const lamppostMaterials = {
   })
 };
 
-function createLightPost() {
+// Lamppost object pool
+const lamppostPool = {
+  available: [],
+  active: [],
+  
+  // Initialize the pool with a number of lampposts
+  init(count = 10) {
+    for (let i = 0; i < count; i++) {
+      this.available.push(this._createLamppost());
+    }
+    return this;
+  },
+  
+  // Get a lamppost from the pool or create a new one if none available
+  get() {
+    let post;
+    if (this.available.length > 0) {
+      post = this.available.pop();
+    } else {
+      console.log('Creating new lamppost - pool exhausted');
+      post = this._createLamppost();
+    }
+    this.active.push(post);
+    return post;
+  },
+  
+  // Release a lamppost back to the pool
+  release(post) {
+    const index = this.active.indexOf(post);
+    if (index !== -1) {
+      this.active.splice(index, 1);
+      // Reset the lamppost state
+      post.visible = false;
+      post.position.set(0, 0, 0);
+      this.available.push(post);
+    }
+  },
+  
+  // Create a new lamppost
+  _createLamppost() {
+    return createLightPostMesh();
+  }
+};
+
+
+// Renamed to indicate it creates the mesh only
+function createLightPostMesh() {
   const post = new THREE.Group();
   
   // Mastro vertical
@@ -139,9 +189,18 @@ function createLightPost() {
   // Armazena referências para controle
   post.light = light;
   post.lamp = lamp;
+  post.visible = false; // Start invisible
 
   return post;
 }
+
+// Wrapper function for backward compatibility
+function createLightPost() {
+  return lamppostPool.get();
+}
+
+// Initialize the pool now that createLightPostMesh is defined
+lamppostPool.init();
 
 function createSidewalkMesh() {
   // Carrega e configura a textura
@@ -264,6 +323,22 @@ export function updateRoad(deltaTime = 0.016) {
     // Quando sair da vista, recicla para trás
     if (block.position.z > roadLength) {
       block.position.z -= roadLength * numBlocks;
+      
+      // Update lamppost states when recycling road blocks
+      if (block.leftPost && block.rightPost) {
+        // Update lamppost visibility based on current state
+        block.leftPost.traverse(child => {
+          if (child.isLight) {
+            child.visible = postsLightsOn;
+          }
+        });
+        
+        block.rightPost.traverse(child => {
+          if (child.isLight) {
+            child.visible = postsLightsOn;
+          }
+        });
+      }
     }
   });
 }
@@ -293,4 +368,19 @@ export function toggleLights(enabled) {
 // Função para verificar o estado atual das luzes
 export function getPostsLightsState() {
   return postsLightsOn;
+}
+
+// Clean up function to release all lampposts back to the pool
+export function cleanupLampposts() {
+  // This can be called when switching scenes or levels
+  roadBlocks.forEach(block => {
+    if (block.leftPost) {
+      lamppostPool.release(block.leftPost);
+      block.leftPost = null;
+    }
+    if (block.rightPost) {
+      lamppostPool.release(block.rightPost);
+      block.rightPost = null;
+    }
+  });
 }
