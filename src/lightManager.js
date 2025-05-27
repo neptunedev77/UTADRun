@@ -1,5 +1,13 @@
 import * as THREE from 'three';
 
+// Variable to track if game is active
+let isGameActive = false;
+
+// Function to set game active state
+export function setLightManagerGameActive(active) {
+  isGameActive = active;
+}
+
 // Variáveis para controlar os indicadores
 let leftIndicator = false;
 let rightIndicator = false;
@@ -115,7 +123,8 @@ export function setupLights(vanObject) {
 export function setupLightControls() {
   // Adicionar event listeners para os botões do mouse
   window.addEventListener('mousedown', (event) => {
-    if (!van) return;
+    // Check if game is active before processing mouse inputs
+    if (!isGameActive || !van) return;
     
     // Mouse botão 1 (botão esquerdo) - indicador direito
     if (event.button === 0) {

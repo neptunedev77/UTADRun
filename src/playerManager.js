@@ -339,9 +339,16 @@ export function createPlayer(scene) {
 export let blockPlayerInput = false;
 export function setBlockPlayerInput(val) { blockPlayerInput = val; }
 
+// Import isGameActive from main.js to check game state
+let isGameActive = false;
+export function setGameActive(active) {
+  isGameActive = active;
+}
+
 export function setupPlayerControls() {
   window.addEventListener('keydown', (event) => {
-    if (blockPlayerInput) return;
+    // Only process input if the game is active
+    if (!isGameActive || blockPlayerInput) return;
     if (!van) return;
     if (event.key === 'a' || event.key === 'ArrowLeft') {
       if (isFlying) {

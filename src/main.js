@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { setupScene, toggleLight, setCameraMode, getActiveCamera, toggleClouds, isCloudsEnabled } from './sceneSetup.js';
 import { updateClouds } from './sceneSetup.js';
 import { createRoad, updateRoad, toggleLights, getPostsLightsState } from './roadManager.js';
-import { createPlayer, setupPlayerControls, updatePlayer, getHeadlightsState, triggerCollisionAnimation, setBlockPlayerInput, isVanFlying, getFlyingStartTime, getFlyingDuration, getPlayerPosition, isVanDescending, getFlyingTimeLeft } from './playerManager.js';
+import { setupLights, setupLightControls, updateLights, getLightState, setLightManagerGameActive } from './lightManager.js';
+import { createPlayer, setupPlayerControls, updatePlayer, getHeadlightsState, triggerCollisionAnimation, setBlockPlayerInput, isVanFlying, getFlyingStartTime, getFlyingDuration, getPlayerPosition, isVanDescending, getFlyingTimeLeft, setGameActive } from './playerManager.js';
 import { loadObstacles, updateObstacles, getScrollSpeed } from './obstacleManager.js';
 import { loadTrees, updateTrees } from './treeManager.js';
 import { createAnimatedHorse, updateAnimatedHorse } from './animatedHorse.js';
@@ -166,6 +167,9 @@ function renderLoadingScreen() {
 function startGame() {
   if (!isGameActive) {
     isGameActive = true;
+    // Set game as active in both managers to enable controls
+    setGameActive(true);
+    setLightManagerGameActive(true);
     lastTime = performance.now() / 1000;
     gameTime = 0;
     setLoadingScreen(false); // Esconde a tela de carregamento
@@ -176,7 +180,14 @@ function startGame() {
 }
 
 // Adicionar listener para teclado
-document.addEventListener('keydown', startGame);
+document.addEventListener('keydown', (event) => {
+  // Only start the game if it's not already active
+  if (!isGameActive) {
+    startGame();
+    // Prevent this keydown event from being processed by other listeners
+    event.stopImmediatePropagation();
+  }
+});
 
 function init() {
   // Mostrar a tela de carregamento
