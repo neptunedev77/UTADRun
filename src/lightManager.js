@@ -1,14 +1,12 @@
 import * as THREE from 'three';
 
-// Variable to track if game is active
 let isGameActive = false;
 
-// Function to set game active state
 export function setLightManagerGameActive(active) {
   isGameActive = active;
 }
 
-// Variáveis para controlar os indicadores
+// Variáveis para controlar os piscas
 let leftIndicator = false;
 let rightIndicator = false;
 let hazardLights = false;
@@ -20,12 +18,6 @@ let rightFrontIndicatorLight;
 let leftRearIndicatorLight;
 let rightRearIndicatorLight;
 let leftHeadlight, rightHeadlight;
-
-// Posições dos faróis (ajustadas para a nova altura da van Y=0.5)
-const FRONT_LEFT_POSITION = new THREE.Vector3(-0.8, 1.0, 2.3);
-const FRONT_RIGHT_POSITION = new THREE.Vector3(0.8, 1.0, 2.3);
-const REAR_LEFT_POSITION = new THREE.Vector3(-0.8, 1.0, -2.3);
-const REAR_RIGHT_POSITION = new THREE.Vector3(0.8, 1.0, -2.3);
 
 // Referência ao van
 let van;
@@ -45,66 +37,44 @@ export function setupLights(vanObject) {
   rightFrontIndicatorLight = null;
   rightRearIndicatorLight = null;
   
-  // Adicionar pequenas luzes pontuais para dar efeito de brilho nos indicadores - LADO ESQUERDO
+  // Adicionar point lights para dar efeito de brilho nos piscas - LADO ESQUERDO
   window.leftFrontIndicatorGlow = new THREE.PointLight(0xffcc00, 3, 1.5);
-  window.leftFrontIndicatorGlow.position.set(-0.8, 0.75, 2.3); // posição ajustada para a frente da van
+  window.leftFrontIndicatorGlow.position.set(-0.8, 0.75, 2.3);
   window.leftFrontIndicatorGlow.visible = false;
   van.add(window.leftFrontIndicatorGlow);
   
   window.leftRearIndicatorGlow = new THREE.PointLight(0xffcc00, 3, 1.5);
-  window.leftRearIndicatorGlow.position.set(-0.8, 0.75, -2.3); // posição ajustada para a traseira da van
+  window.leftRearIndicatorGlow.position.set(-0.8, 0.75, -2.3);
   window.leftRearIndicatorGlow.visible = false;
   van.add(window.leftRearIndicatorGlow);
   
-  // Adicionar pequenas luzes pontuais para dar efeito de brilho nos indicadores - LADO DIREITO
+  // Adicionar point lights para dar efeito de brilho nos piscas - LADO DIREITO
   window.rightFrontIndicatorGlow = new THREE.PointLight(0xffcc00, 3, 1.5);
-  window.rightFrontIndicatorGlow.position.set(0.8, 0.75, 2.3); // posição ajustada para a frente da van
+  window.rightFrontIndicatorGlow.position.set(0.8, 0.75, 2.3);
   window.rightFrontIndicatorGlow.visible = false;
   van.add(window.rightFrontIndicatorGlow);
   
   window.rightRearIndicatorGlow = new THREE.PointLight(0xffcc00, 3, 1.5);
-  window.rightRearIndicatorGlow.position.set(0.8, 0.75, -2.3); // posição ajustada para a traseira da van
+  window.rightRearIndicatorGlow.position.set(0.8, 0.75, -2.3);
   window.rightRearIndicatorGlow.visible = false;
   van.add(window.rightRearIndicatorGlow);
   
-  // Adiciona os faróis (SpotLight) - posicionados exatamente nos faróis da van
+  // Adiciona os faróis (SpotLight)
   leftHeadlight = new THREE.SpotLight(0xffffff, 40, 50, Math.PI / 4, 0.8, 1);
-  leftHeadlight.position.set(-0.3, 0.75, 2.3); // posição ajustada para a frente da van
-  leftHeadlight.target.position.set(-0.3, 0, 10); // alvo mais próximo para luz mais concentrada
+  leftHeadlight.position.set(-0.3, 0.75, 2.3);
+  leftHeadlight.target.position.set(-0.3, 0, 10);
   leftHeadlight.visible = headlightsOn;
   leftHeadlight.castShadow = true;
   van.add(leftHeadlight);
   van.add(leftHeadlight.target);
 
   rightHeadlight = new THREE.SpotLight(0xffffff, 40, 50, Math.PI / 4, 0.8, 1);
-  rightHeadlight.position.set(0.3, 0.75, 2.3); // posição ajustada para a frente da van
-  rightHeadlight.target.position.set(0.3, 0, 10); // alvo mais próximo para luz mais concentrada
+  rightHeadlight.position.set(0.3, 0.75, 2.3);
+  rightHeadlight.target.position.set(0.3, 0, 10);
   rightHeadlight.visible = headlightsOn;
   rightHeadlight.castShadow = true;
   van.add(rightHeadlight);
   van.add(rightHeadlight.target);
-  
-  // Adicionar pequenas luzes pontuais para dar efeito de brilho nos faróis frontais
-  const leftHeadlightGlow = new THREE.PointLight(0xffffff, 4, 2);
-  leftHeadlightGlow.position.set(-0.3, 0.75, 2.3); // posição ajustada para a frente da van
-  leftHeadlightGlow.visible = headlightsOn;
-  van.add(leftHeadlightGlow);
-  
-  const rightHeadlightGlow = new THREE.PointLight(0xffffff, 4, 2);
-  rightHeadlightGlow.position.set(0.3, 0.75, 2.3); // posição ajustada para a frente da van
-  rightHeadlightGlow.visible = headlightsOn;
-  van.add(rightHeadlightGlow);
-  
-  // Adicionar pequenas luzes pontuais para os faróis traseiros
-  window.leftRearLightGlow = new THREE.PointLight(0xff0000, 2, 1.5);
-  window.leftRearLightGlow.position.set(-0.3, 0.75, -2.3); // posição ajustada para a traseira da van
-  window.leftRearLightGlow.visible = false; // Forçar desligado inicialmente
-  van.add(window.leftRearLightGlow);
-  
-  window.rightRearLightGlow = new THREE.PointLight(0xff0000, 2, 1.5);
-  window.rightRearLightGlow.position.set(0.3, 0.75, -2.3); // posição ajustada para a traseira da van
-  window.rightRearLightGlow.visible = false; // Forçar desligado inicialmente
-  van.add(window.rightRearLightGlow);
   
   // Adicionar listener para atualizar as luzes traseiras quando a luz direcional mudar
   window.addEventListener('directionalLightToggled', function() {
@@ -213,7 +183,7 @@ function toggleHazardLights() {
   // Alternar as luzes de emergência
   hazardLights = !hazardLights;
   
-  // Se ligar as luzes de emergência, desligar os indicadores individuais
+  // Se ligar as luzes de emergência, desligar os piscas individuais
   if (hazardLights) {
     leftIndicator = false;
     rightIndicator = false;

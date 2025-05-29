@@ -103,6 +103,10 @@ export function setupScene() {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Sombras mais suaves
   renderer.shadowMap.autoUpdate = true;
   renderer.physicallyCorrectLights = true;
+  
+  // Enable maximum anisotropic filtering for better texture quality
+  const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
+  renderer.setPixelRatio(window.devicePixelRatio); // Use device pixel ratio for sharper rendering
 
   return { scene, camera, renderer };
 }

@@ -207,12 +207,18 @@ function createSidewalkMesh() {
   const topoTex = new THREE.TextureLoader().load('/assets/textures/passeio.png');
   topoTex.wrapS = topoTex.wrapT = THREE.RepeatWrapping;
   topoTex.repeat.set(1, roadLength); // Repete só no Z
+  topoTex.minFilter = THREE.LinearMipmapLinearFilter; // Better downscaling
+  topoTex.magFilter = THREE.LinearFilter; // Better upscaling
+  topoTex.anisotropy = 16; // Improves texture quality at oblique angles
 
   // Carrega e configura a textura lateral
   const sideTex = new THREE.TextureLoader().load('/assets/textures/passeio_lado.png');
   sideTex.wrapS = sideTex.wrapT = THREE.RepeatWrapping;
   sideTex.repeat.set(1, roadLength); // Repete só no Z
   sideTex.rotation = Math.PI/2; // Roda a textura para alinhar com o eixo Z
+  sideTex.minFilter = THREE.LinearMipmapLinearFilter; // Better downscaling
+  sideTex.magFilter = THREE.LinearFilter; // Better upscaling
+  sideTex.anisotropy = 16; // Improves texture quality at oblique angles
   
   // Materiais
   const matSide = new THREE.MeshStandardMaterial({ 
@@ -321,12 +327,12 @@ export function updateRoad(deltaTime = 0.016) {
   roadBlocks.forEach(block => {
     block.position.z += getScrollSpeed();
     // Quando sair da vista, recicla para trás
-    if (block.position.z > roadLength) {
+    if (block.position.z > roadLength) {  
       block.position.z -= roadLength * numBlocks;
       
-      // Update lamppost states when recycling road blocks
+      // Atualiza o estado das luzes dos postes
       if (block.leftPost && block.rightPost) {
-        // Update lamppost visibility based on current state
+        // Atualiza a visibilidade das luzes dos postes
         block.leftPost.traverse(child => {
           if (child.isLight) {
             child.visible = postsLightsOn;
@@ -370,9 +376,9 @@ export function getPostsLightsState() {
   return postsLightsOn;
 }
 
-// Clean up function to release all lampposts back to the pool
+// Função para limpar todos os postes de luz e devolvê-los ao pool
 export function cleanupLampposts() {
-  // This can be called when switching scenes or levels
+  // Chamada quando mudar de cena ou nível
   roadBlocks.forEach(block => {
     if (block.leftPost) {
       lamppostPool.release(block.leftPost);

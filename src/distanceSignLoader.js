@@ -7,7 +7,7 @@ let distanceSigns = [];
 let scene;
 let lastSignDistance = 0;
 const signSpacing = 100; // Cria um novo sinal a cada 100 metros
-const xPositions = [12, 15]; // Posições apenas na lateral direita
+const xPositions = [12, 15]; // Lado direito
 const signDistance = 25; // Distância em unidades do jogo da posição do jogador para a criação do sinal
 const initialSignDistance = 10; // Distância para a placa inicial
 
@@ -77,7 +77,6 @@ function createWelcomeDisplay(mesh) {
     
     // Cria canvas para o texto
     const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
     canvas.width = 1024;
     canvas.height = 512;
     
