@@ -76,6 +76,28 @@ export function setupLights(vanObject) {
   van.add(rightHeadlight);
   van.add(rightHeadlight.target);
   
+  // Adicionar point lights para dar efeito de brilho nos faróis frontais
+  const leftHeadlightGlow = new THREE.PointLight(0xffffff, 4, 2);
+  leftHeadlightGlow.position.set(-0.3, 0.75, 2.3);
+  leftHeadlightGlow.visible = headlightsOn;
+  van.add(leftHeadlightGlow);
+  
+  const rightHeadlightGlow = new THREE.PointLight(0xffffff, 4, 2);
+  rightHeadlightGlow.position.set(0.3, 0.75, 2.3);
+  rightHeadlightGlow.visible = headlightsOn;
+  van.add(rightHeadlightGlow);
+  
+  // Adicionar point lights para os faróis traseiros
+  window.leftRearLightGlow = new THREE.PointLight(0xff0000, 2, 1.5);
+  window.leftRearLightGlow.position.set(-0.3, 0.75, -2.3);
+  window.leftRearLightGlow.visible = false;
+  van.add(window.leftRearLightGlow);
+  
+  window.rightRearLightGlow = new THREE.PointLight(0xff0000, 2, 1.5);
+  window.rightRearLightGlow.position.set(0.3, 0.75, -2.3);
+  window.rightRearLightGlow.visible = false;
+  van.add(window.rightRearLightGlow);
+  
   // Adicionar listener para atualizar as luzes traseiras quando a luz direcional mudar
   window.addEventListener('directionalLightToggled', function() {
     if (window.leftRearLightGlow && window.rightRearLightGlow) {
@@ -93,15 +115,14 @@ export function setupLights(vanObject) {
 export function setupLightControls() {
   // Adicionar event listeners para os botões do mouse
   window.addEventListener('mousedown', (event) => {
-    // Check if game is active before processing mouse inputs
     if (!isGameActive || !van) return;
     
-    // Mouse botão 1 (botão esquerdo) - indicador direito
+    // Mouse botão 1 (botão esquerdo) - pisca direito
     if (event.button === 0) {
       toggleRightIndicator();
     }
     
-    // Mouse botão 2 (botão direito) - indicador esquerdo
+    // Mouse botão 2 (botão direito) - pisca esquerdo
     if (event.button === 2) {
       toggleLeftIndicator();
       // Prevenir o menu de contexto do botão direito

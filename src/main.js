@@ -252,11 +252,13 @@ function init() {
       if (!showHitboxes && window.clearHitboxes && scene) {
         window.clearHitboxes(scene);
       }
+      window.updateGameTooltips(); // Atualiza os tooltips após a mudança do estado das hitboxes
     }
 
     if (event.key.toLowerCase() === 'n') {
       toggleClouds();
       console.log('Nuvens ' + (isCloudsEnabled() ? 'ativadas' : 'desativadas'));
+      window.updateGameTooltips(); // Atualiza os tooltips após a mudança do estado das nuvens
       updateLightingHint();
     }
   });
@@ -270,6 +272,11 @@ function init() {
 }
 
 function updateLightingHint() {
+  window.updateGameTooltips();
+}
+
+// Função para atualizar os tooltips do jogo
+window.updateGameTooltips = function() {
   const hintElement = document.getElementById('cameraHint');
   if (hintElement) {
     const cameraText = getActiveCamera() === camera ? 
@@ -298,6 +305,8 @@ function togglePause() {
     } else {
       playCarEngineAudio();
     }
+    // Atualiza os tooltips
+    window.updateGameTooltips();
     console.log(isPaused ? 'Game paused' : 'Game resumed');
   }
 }
@@ -598,6 +607,11 @@ function animate(currentTime) {
     // Atualiza as nuvens
     updateClouds(deltaTime);
     
+    // Atualiza os tooltips a cada segundo
+    if (frameCount % 60 === 0) {
+      window.updateGameTooltips();
+    }
+    
     // Limpeza de objetos removidos
     cleanupRemovedObjects();
     
@@ -743,8 +757,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 export function setupPlayerControlsWithBlock() {
   window.addEventListener('keydown', (event) => {
-    // Only block input if it's not the W key for jumping
-    if (blockPlayerInput && event.key.toLowerCase() !== 'w') {
+    const key = event.key.toLowerCase();
+    const movementKeys = ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '];
+    if (blockPlayerInput && !movementKeys.includes(key)) {
       event.preventDefault();
       return;
     }

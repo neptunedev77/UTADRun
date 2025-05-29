@@ -21,6 +21,8 @@ let flyingTargetHeight = 4;
 let flyingSpeed = 0;
 let rocketPower = 0;
 let isRocketBoosting = false;
+let flyingTilt = 0;
+let flyingForwardTilt = 0;
 
 // Configurações de aceleração durante o voo
 const ROCKET_POWER = 0.15;
@@ -103,7 +105,9 @@ export function setupPlayerControls() {
     // Processa inputs apenas se o jogo estiver ativo
     if (!isGameActive || blockPlayerInput) return;
     if (!van) return;
-    if (event.key === 'a' || event.key === 'ArrowLeft') {
+    const key = event.key.toLowerCase();
+    
+    if (key === 'a' || key === 'arrowleft') {
       if (isFlying) {
         // Quando estiver a voar, apenas muda de faixa se não estiver na faixa mais à esquerda
         if (currentLaneIndex > 0) {
@@ -121,7 +125,7 @@ export function setupPlayerControls() {
         updateLanePosition();
       }
     }
-    if (event.key === 'd' || event.key === 'ArrowRight') {
+    if (key === 'd' || key === 'arrowright') {
       if (isFlying) {
         // Quando estiver a voar, apenas muda de faixa se não estiver na faixa mais à direita
         if (currentLaneIndex < lanePositions.length - 1) {
@@ -139,7 +143,6 @@ export function setupPlayerControls() {
         updateLanePosition();
       }
     }
-    const key = event.key.toLowerCase();
     if ((key === ' ' || key === 'arrowup' || key === 'w') && !isVanFlying() && !isJumping) {
       isJumping = true;
       jumpStartTime = performance.now() / 1000;

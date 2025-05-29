@@ -12,13 +12,13 @@ let cameraMode = 'default';
 let clouds = [];
 let cloudsEnabled = false;
 
-// Referência à cena para adicionar novas nuvens
+// Referência à cena para adicionar nuvens
 let sceneRef = null;
 
-// Variável para controlar a geração de novas nuvens
+// Variáveis para controlar a geração de nuvens
 let cloudGenerationTimer = 0;
-let cloudGenerationInterval = 3; // Gerar nova nuvem a cada 3 segundos (mais frequente)
-let cloudGenerationEnabled = false; // Desativado até que a cena seja configurada
+let cloudGenerationInterval = 3;
+let cloudGenerationEnabled = false;
 let maxClouds = 15;
 
 export function setupScene() {
@@ -58,25 +58,21 @@ export function setupScene() {
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
 
-  // Luz ambiente - ajustada para um dia ensolarado (azul leve para simular luz do céu)
+  // Luz ambiente
   ambientLight = new THREE.AmbientLight(0xc4d1ff, 0.4);
   ambientLight.visible = lightStates.ambient;
   scene.add(ambientLight);
 
-  // Luz direcional - ajustada para simular o sol (mais intensa e amarelada)
+  // Luz direcional
   directionalLight = new THREE.DirectionalLight(0xfffacd, 1.2);
   directionalLight.position.set(0, 20, 10);
-  directionalLight.castShadow = true; // Ativa sombras
+  directionalLight.castShadow = true;
   
-  // Aumentar a resolução das sombras para melhor qualidade
+  // Configuração das sombras
   directionalLight.shadow.mapSize.width = 2048;
   directionalLight.shadow.mapSize.height = 2048;
-  
-  // Configurar a câmera de sombra para um alcance muito maior
   directionalLight.shadow.camera.near = 0.5;
-  directionalLight.shadow.camera.far = 800; // Aumentado de 200 para 800
-  
-  // Aumentar o tamanho da área de sombra para cobrir mais terreno
+  directionalLight.shadow.camera.far = 800;
   directionalLight.shadow.camera.left = -150;
   directionalLight.shadow.camera.right = 150;
   directionalLight.shadow.camera.top = 150;
@@ -100,18 +96,18 @@ export function setupScene() {
 
   // Ativar sombras no renderer com configurações de alta qualidade
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Sombras mais suaves
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.shadowMap.autoUpdate = true;
   renderer.physicallyCorrectLights = true;
   
-  // Enable maximum anisotropic filtering for better texture quality
+  // Filtragem anisotrópica para melhor qualidade de texturas
   const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
-  renderer.setPixelRatio(window.devicePixelRatio); // Use device pixel ratio for sharper rendering
+  renderer.setPixelRatio(window.devicePixelRatio);
 
   return { scene, camera, renderer };
 }
 
-// Função para criar nuvens mais volúmicas e realistas
+// Função para criar nuvens
 function createClouds(scene, textureLoader) {
   if (!cloudsEnabled) return;
   // Criar textura de nuvem mais detalhada
@@ -137,7 +133,7 @@ function createClouds(scene, textureLoader) {
   const cloudEdgeMaterial = cloudBaseMaterial.clone();
   cloudEdgeMaterial.opacity = 0.7;
   
-  // Criar nuvens volúmicas em vez de planas
+  // Criar nuvens
   for (let i = 0; i < 15; i++) {
     // Criar um grupo para cada nuvem
     const cloudGroup = new THREE.Group();
@@ -167,18 +163,18 @@ function createClouds(scene, textureLoader) {
       // Posicionar as partes ao redor do núcleo de forma irregular
       partMesh.position.set(
         (Math.random() - 0.5) * coreSize * 1.5,
-        (Math.random() - 0.3) * coreSize * 1.2, // Mais concentrado no topo
+        (Math.random() - 0.3) * coreSize * 1.2,
         (Math.random() - 0.5) * coreSize * 1.5
       );
       
       cloudGroup.add(partMesh);
     }
     
-    // Posicionar a nuvem aleatoriamente no céu - distribuição mais ampla
+    // Posicionar a nuvem aleatoriamente no céu
     cloudGroup.position.set(
-      Math.random() * 600 - 300, // Distribuição horizontal mais ampla
-      35 + Math.random() * 50,  // Maior variação de altura
-      Math.random() * 800 - 700 // Distribuição em profundidade muito maior
+      Math.random() * 600 - 300,
+      35 + Math.random() * 50,
+      Math.random() * 800 - 700
     );
     
     // Rotação aleatória para maior naturalidade
@@ -202,20 +198,17 @@ function createClouds(scene, textureLoader) {
   }
 }
 
-// Função para gerar textura de nuvem mais realista
+// Função para gerar textura de nuvem
 function generateCloudTexture() {
   const canvas = document.createElement('canvas');
-  canvas.width = 512; // Dobro da resolução para mais detalhes
+  canvas.width = 512;
   canvas.height = 256;
   
   const context = canvas.getContext('2d');
   
-  // Limpar o canvas
   context.fillStyle = 'rgba(255, 255, 255, 0)';
   context.fillRect(0, 0, canvas.width, canvas.height);
   
-  // Criar base irregular em vez de circular
-  // Primeiro, criar uma forma base irregular
   context.fillStyle = 'rgba(255, 255, 255, 0.9)';
   
   // Desenhar formas irregulares para a base da nuvem
@@ -228,9 +221,8 @@ function generateCloudTexture() {
     context.save();
     context.translate(centerX, centerY);
     context.rotate(Math.random() * Math.PI);
-    context.scale(1, 0.6 + Math.random() * 0.4); // Achatamento variável
+    context.scale(1, 0.6 + Math.random() * 0.4);
     
-    // Desenhar forma irregular
     context.beginPath();
     context.moveTo(0, 0);
     
@@ -324,23 +316,6 @@ function generateCloudTexture() {
   return canvas;
 }
 
-// Função para atualizar as nuvens (original - desativada)
-// Esta função foi substituída pela nova versão abaixo
-function updateCloudsOriginal(deltaTime = 0.016) {
-  if (!cloudsEnabled) return;
-  clouds.forEach(cloud => {
-    // Mover a nuvem na direção definida
-    cloud.mesh.position.x += cloud.direction.x * cloud.speed;
-    cloud.mesh.position.z += cloud.direction.z * cloud.speed;
-    
-    // Se a nuvem sair do campo de visão, reposicioná-la
-    if (cloud.mesh.position.z > 50) {
-      cloud.mesh.position.z = -250;
-      cloud.mesh.position.x = Math.random() * 400 - 200;
-    }
-  });
-}
-
 export function getActiveCamera() {
   if (cameraMode === 'orthographic') {
     return orthographicCamera;
@@ -352,6 +327,17 @@ export function getActiveCamera() {
 export function setCameraMode(mode) {
   cameraMode = mode;
   updateCameraHint();
+  
+  // Atualiza os tooltips
+  updateLightingHint();
+  
+  // Garante que os tooltips permaneçam visíveis
+  const tooltips = document.querySelectorAll('.tooltip, .status-text, #lightingHint');
+  tooltips.forEach(tooltip => {
+    if (tooltip) {
+      tooltip.style.display = '';
+    }
+  });
 }
 
 // Função para ligar/desligar cada luz
@@ -528,20 +514,20 @@ function generateNewCloud() {
     color: 0xffffff,
     map: cloudTexture,
     transparent: true,
-    opacity: 0.95, // Aumentado para 0.95 para maior densidade
+    opacity: 0.95,
     side: THREE.DoubleSide,
     emissive: new THREE.Color(0xffffff),
-    emissiveIntensity: 0.2, // Aumentado para 0.2 para maior brilho
+    emissiveIntensity: 0.2,
     emissiveMap: cloudTexture,
-    roughness: 0.15, // Reduzido para 0.15 para superfície mais suave
+    roughness: 0.15,
     metalness: 0.0,
     alphaTest: 0.05,
-    depthWrite: false // Melhora a renderização de objetos transparentes sobrepostos
+    depthWrite: false
   });
   
   // Material para as bordas das nuvens - mais transparente
   const cloudEdgeMaterial = cloudBaseMaterial.clone();
-  cloudEdgeMaterial.opacity = 0.7; // Aumentado para 0.7 para maior densidade
+  cloudEdgeMaterial.opacity = 0.7;
   
   // Criar um grupo para a nova nuvem
   const cloudGroup = new THREE.Group();
@@ -550,14 +536,14 @@ function generateNewCloud() {
   cloudGroup.position.set(
     Math.random() * 500 - 250,
     35 + Math.random() * 40,
-    -400 // Sempre começar mais longe no horizonte
+    -400
   );
   
   // Rotação aleatória
   cloudGroup.rotation.y = Math.random() * Math.PI * 2;
   
   // Tamanho base da nuvem
-  const cloudBaseSize = 12 + Math.random() * 16; // Nuvens maiores
+  const cloudBaseSize = 12 + Math.random() * 16;
   
   // Criar o núcleo denso da nuvem
   const coreSize = cloudBaseSize * 0.6;
@@ -566,7 +552,7 @@ function generateNewCloud() {
   cloudGroup.add(coreMesh);
   
   // Adicionar formas irregulares ao redor do núcleo para dar volume
-  const numParts = 8 + Math.floor(Math.random() * 4); // 8-12 partes
+  const numParts = 8 + Math.floor(Math.random() * 4);
   
   for (let i = 0; i < numParts; i++) {
     const partSize = (0.4 + Math.random() * 0.6) * coreSize;
@@ -576,10 +562,10 @@ function generateNewCloud() {
       Math.random() > 0.5 ? cloudBaseMaterial : cloudEdgeMaterial
     );
     
-    // Posicionar as partes ao redor do núcleo, mais concentradas no topo
+    // Posicionar as partes ao redor do núcleo
     partMesh.position.set(
       (Math.random() - 0.5) * coreSize * 1.2,
-      (Math.random() * 0.8) * coreSize * 0.8, // Mais para cima
+      (Math.random() * 0.8) * coreSize * 0.8,
       (Math.random() - 0.5) * coreSize * 1.2
     );
     
@@ -594,8 +580,8 @@ function generateNewCloud() {
   if (sceneRef) {
     sceneRef.add(cloudGroup);
   } else {
-    console.warn('Cannot add cloud - scene reference is missing');
-    return; // Sair da função se não houver cena
+    console.warn('Erro ao adicionar nuvem - referência à cena ausente');
+    return;
   }
   
   // Adicionar ao array de nuvens para animação
@@ -603,9 +589,9 @@ function generateNewCloud() {
     mesh: cloudGroup,
     speed: 0.05 + Math.random() * 0.05,
     direction: new THREE.Vector3(
-      (Math.random() - 0.5) * 0.2, // Pequena variação horizontal
+      (Math.random() - 0.5) * 0.2,
       0,
-      1 // Principalmente para frente
+      1
     ),
     rotationSpeed: (Math.random() - 0.5) * 0.02,
     toRemove: false
@@ -613,8 +599,10 @@ function generateNewCloud() {
 }
 
 // Função que atualiza o texto das luzes na UI
-function updateLightingHint() {
-  updateCameraHint();
+export function updateLightingHint() {
+  if (typeof window.updateGameTooltips === 'function') {
+    window.updateGameTooltips();
+  }
 }
 
 // Função para atualizar a câmera ortográfica
