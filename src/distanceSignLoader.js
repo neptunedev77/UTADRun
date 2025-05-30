@@ -74,7 +74,7 @@ function createWelcomeSign(distance) {
 // Cria o texto de boas-vindas
 function createWelcomeDisplay(mesh) {
     if (!mesh) return;
-    
+
     // Cria canvas para o texto
     const canvas = document.createElement('canvas');
     canvas.width = 1024;
@@ -84,8 +84,11 @@ function createWelcomeDisplay(mesh) {
     const texture = new THREE.CanvasTexture(canvas);
     
     // Cria material com a textura do canvas
-    const textMaterial = new THREE.MeshBasicMaterial({
+    const textMaterial = new THREE.MeshStandardMaterial({
         map: texture,
+        color: 0xffffff,
+        roughness: 0.8,
+        metalness: 0.2,
         transparent: true
     });
     
@@ -102,14 +105,21 @@ function createWelcomeDisplay(mesh) {
     canvasContext.fillStyle = 'rgba(130, 82, 39, 0.3)';
     canvasContext.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Adiciona texto
-    canvasContext.fillStyle = 'white';
+    // Adiciona texto com contorno preto
     canvasContext.font = 'bold 80px Arial';
+    canvasContext.lineWidth = 8;
+    canvasContext.strokeStyle = 'black';
     canvasContext.textAlign = 'center';
     canvasContext.textBaseline = 'middle';
+    canvasContext.strokeText('Bem-vindo à', canvas.width / 2, canvas.height / 3);
+    canvasContext.fillStyle = 'black';
     canvasContext.fillText('Bem-vindo à', canvas.width / 2, canvas.height / 3);
     
     canvasContext.font = 'bold 120px Arial';
+    canvasContext.lineWidth = 10;
+    canvasContext.strokeStyle = 'black';
+    canvasContext.strokeText('UTAD!', canvas.width / 2, canvas.height * 2/3);
+    canvasContext.fillStyle = 'black';
     canvasContext.fillText('UTAD!', canvas.width / 2, canvas.height * 2/3);
     
     // Atualiza a textura
@@ -151,7 +161,10 @@ function createDistanceSignMesh(woodTexture) {
     
     // Cria o plano para a área de texto - aumentado para corresponder ao novo tamanho do sinal
     const textGeometry = new THREE.PlaneGeometry(3.7, 1.7);
-    const textMaterial = new THREE.MeshBasicMaterial({
+    const textMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        roughness: 0.8,
+        metalness: 0.2,
         transparent: true,
         opacity: 0.9
     });
@@ -226,8 +239,11 @@ function createTextDisplay(mesh, distance) {
     const texture = new THREE.CanvasTexture(canvas);
     
     // Cria material com a textura do canvas
-    const textMaterial = new THREE.MeshBasicMaterial({
+    const textMaterial = new THREE.MeshStandardMaterial({
         map: texture,
+        color: 0xffffff,
+        roughness: 0.8,
+        metalness: 0.2,
         transparent: true
     });
     
@@ -253,14 +269,21 @@ function updateDistanceText(mesh, distance) {
     context.fillStyle = 'rgba(130, 82, 39, 0.3)';
     context.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Adiciona texto
-    context.fillStyle = 'white';
+    // Adiciona texto com contorno preto
     context.font = 'bold 100px Arial';
+    context.lineWidth = 8;
+    context.strokeStyle = 'black';
     context.textAlign = 'center';
     context.textBaseline = 'middle';
+    context.strokeText('PONTUAÇÃO', canvas.width / 2, canvas.height / 3);
+    context.fillStyle = 'black';
     context.fillText('PONTUAÇÃO', canvas.width / 2, canvas.height / 3);
     
     context.font = 'bold 120px Arial';
+    context.lineWidth = 10;
+    context.strokeStyle = 'black';
+    context.strokeText(distance - 10 + ' m', canvas.width / 2, canvas.height * 2/3);
+    context.fillStyle = 'black';
     context.fillText(distance - 10 + ' m', canvas.width / 2, canvas.height * 2/3);
     
     // Atualiza a textura
@@ -314,3 +337,13 @@ function easeOutBack(t) {
     const c3 = c1 + 1;
     return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
 }
+
+// Atualiza o material do texto das placas quando a luz direcional é ligada/desligada
+window.addEventListener('directionalLightToggled', function() {
+    distanceSigns.forEach(signObj => {
+        if (signObj.textMesh && signObj.textMesh.material) {
+            // Força o material a atualizar (caso precise)
+            signObj.textMesh.material.needsUpdate = true;
+        }
+    });
+});
