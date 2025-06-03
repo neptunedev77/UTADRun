@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 // Parâmetros de escala final
-const FINAL_SCALE = { x: 1.5, y: 0.7, z: 1.5 };
+const FINAL_SCALE = { x: 2.4, y: 1.1, z: 2.4 };
 const FADE_DURATION = 0.7; // segundos
 
 /**
