@@ -155,14 +155,14 @@ function createLightPostMesh() {
 
   // Disco inferior
   const bottomCircle = new THREE.Mesh(lamppostGeometries.circle, lamppostMaterials.circle);
-  bottomCircle.position.set(0, 0.1, 0); // Ajustado para 0.1 para ficar logo acima do chão
+  bottomCircle.position.set(0, 0.25, 0);
   bottomCircle.castShadow = true;
   bottomCircle.receiveShadow = true;
   post.add(bottomCircle);
 
   // Disco superior
   const topCircle = new THREE.Mesh(lamppostGeometries.circle, lamppostMaterials.circle);
-  topCircle.position.set(0, 0.2, 0);
+  topCircle.position.set(0, 4.7, 0);
   topCircle.castShadow = true;
   topCircle.receiveShadow = true;
   post.add(topCircle);

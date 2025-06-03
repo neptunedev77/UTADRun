@@ -46,7 +46,7 @@ function createWelcomeSign(distance) {
     welcomeSign.scale.set(0.01, 0.01, 0.01); // Começa pequeno para animar
     welcomeSign.position.set(xPos, 2, zOffset - 15); // Posiciona mais longe para ser visível mais cedo
     
-    // Sempre olha para a esquerda já que estamos na lateral direita
+    // Virado para a esquerda
     welcomeSign.rotation.y = -Math.PI / 4;
     
     // Encontra o mesh da área de texto e configura a exibição da mensagem de boas-vindas
@@ -58,7 +58,6 @@ function createWelcomeSign(distance) {
         }
     });
     
-    // Adiciona ao scene e armazena no nosso array
     scene.add(welcomeSign);
     distanceSigns.push({
         mesh: welcomeSign,
@@ -82,7 +81,7 @@ function createWelcomeDisplay(mesh) {
     
     // Cria textura do canvas
     const texture = new THREE.CanvasTexture(canvas);
-    
+
     // Cria material com a textura do canvas
     const textMaterial = new THREE.MeshStandardMaterial({
         map: texture,
@@ -102,24 +101,24 @@ function createWelcomeDisplay(mesh) {
     canvasContext.clearRect(0, 0, canvas.width, canvas.height);
     
     // Adiciona fundo de madeira com alguma transparência
-    canvasContext.fillStyle = 'rgba(130, 82, 39, 0.3)';
+    canvasContext.fillStyle = 'rgba(23, 14, 9, 0.3)';
     canvasContext.fillRect(0, 0, canvas.width, canvas.height);
     
     // Adiciona texto com contorno preto
-    canvasContext.font = 'bold 80px Arial';
-    canvasContext.lineWidth = 8;
+    canvasContext.font = 'bold 120px Arial';
+    canvasContext.lineWidth = 9;
     canvasContext.strokeStyle = 'black';
     canvasContext.textAlign = 'center';
     canvasContext.textBaseline = 'middle';
     canvasContext.strokeText('Bem-vindo à', canvas.width / 2, canvas.height / 3);
-    canvasContext.fillStyle = 'black';
+    canvasContext.fillStyle = '#fefefe';
     canvasContext.fillText('Bem-vindo à', canvas.width / 2, canvas.height / 3);
     
     canvasContext.font = 'bold 120px Arial';
     canvasContext.lineWidth = 10;
     canvasContext.strokeStyle = 'black';
     canvasContext.strokeText('UTAD!', canvas.width / 2, canvas.height * 2/3);
-    canvasContext.fillStyle = 'black';
+    canvasContext.fillStyle = '#fefefe';
     canvasContext.fillText('UTAD!', canvas.width / 2, canvas.height * 2/3);
     
     // Atualiza a textura
@@ -131,7 +130,7 @@ function createDistanceSignMesh(woodTexture) {
     const signGroup = new THREE.Group();
     signGroup.name = "DistanceSign";
     
-    // Cria a placa do sinal - aumentada para 4x2
+    // Cria a placa do sinal
     const signGeometry = new THREE.BoxGeometry(4, 2, 0.15);
     const signMaterial = new THREE.MeshStandardMaterial({
         map: woodTexture,
@@ -266,24 +265,26 @@ function updateDistanceText(mesh, distance) {
     context.clearRect(0, 0, canvas.width, canvas.height);
     
     // Adiciona fundo de madeira com alguma transparência
-    context.fillStyle = 'rgba(130, 82, 39, 0.3)';
+    // Usar a mesma cor de fundo do sinal de boas-vindas
+    context.fillStyle = 'rgba(23, 14, 9, 0.3)';
     context.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Adiciona texto com contorno preto
-    context.font = 'bold 100px Arial';
-    context.lineWidth = 8;
+    // Adiciona texto com contorno preto - mesmo estilo do welcome sign
+    context.font = 'bold 120px Arial';
+    context.lineWidth = 9;
     context.strokeStyle = 'black';
     context.textAlign = 'center';
     context.textBaseline = 'middle';
     context.strokeText('PONTUAÇÃO', canvas.width / 2, canvas.height / 3);
-    context.fillStyle = 'black';
+    context.fillStyle = '#fefefe';
     context.fillText('PONTUAÇÃO', canvas.width / 2, canvas.height / 3);
     
+    // Usa a mesma configuração para o texto da pontuação
     context.font = 'bold 120px Arial';
     context.lineWidth = 10;
     context.strokeStyle = 'black';
     context.strokeText(distance - 10 + ' m', canvas.width / 2, canvas.height * 2/3);
-    context.fillStyle = 'black';
+    context.fillStyle = '#fefefe';
     context.fillText(distance - 10 + ' m', canvas.width / 2, canvas.height * 2/3);
     
     // Atualiza a textura
@@ -337,13 +338,3 @@ function easeOutBack(t) {
     const c3 = c1 + 1;
     return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
 }
-
-// Atualiza o material do texto das placas quando a luz direcional é ligada/desligada
-window.addEventListener('directionalLightToggled', function() {
-    distanceSigns.forEach(signObj => {
-        if (signObj.textMesh && signObj.textMesh.material) {
-            // Força o material a atualizar (caso precise)
-            signObj.textMesh.material.needsUpdate = true;
-        }
-    });
-});
