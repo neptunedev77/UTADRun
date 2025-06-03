@@ -3,6 +3,7 @@ import { FBXLoader } from 'FBXLoader';
 import { addBeerCrateToObstacles } from './beerCrateManager.js';
 import { getPlayerPosition, startFlying, isVanFlying, isVanJumping } from './playerManager.js';
 import { loseLife } from './main.js';
+import { OvniController } from './ovniManager.js';
 
 const obstacles = [];
 const obstacleTemplates = {};
@@ -17,8 +18,11 @@ const modelList = [
   { name: 'cone', generator: createConeDeTransito },
   { name: 'cavalo', file: './assets/models/obstaculos/cavalo.fbx', scale: 0.02 },
   { name: 'tampa', file: './assets/models/obstaculos/tampa.fbx', scale: 0.0015 },
-  { name: 'beerCrate', generator: () => null } // Will be added in loadObstacles
+  { name: 'beerCrate', generator: () => null }, // Will be added in loadObstacles
+  { name: 'ovni', generator: () => null } // OVNI é gerido separadamente
 ];
+
+let ovniController = null;
 
 // Gerador de buraco
 function createBuraco() {
@@ -156,6 +160,8 @@ export function loadObstacles(scene) {
       // Add beer crate to obstacle templates
       addBeerCrateToObstacles(obstacleTemplates);
       generateObstacles(scene);
+      // Instanciar o OVNI
+      ovniController = new OvniController(scene);
     }
   }
 }
@@ -318,6 +324,16 @@ export function updateObstacles(deltaTime = 0.016, scene) {
 
     }
   });
+
+  if (ovniController) {
+    ovniController.update(deltaTime);
+    // Controla visibilidade do OVNI
+    if (ovniController.active) {
+      ovniController.ovni.visible = true;
+    } else {
+      ovniController.ovni.visible = false;
+    }
+  }
 }
 
 function playSfx(src, volume = 1.0) {
